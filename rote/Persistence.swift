@@ -8,7 +8,7 @@
 import CoreData
 import SwiftUI
 
-struct PersistenceController {
+class PersistenceController {
     static let shared = PersistenceController()
 
     static var preview: PersistenceController = {

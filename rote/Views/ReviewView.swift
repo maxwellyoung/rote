@@ -134,33 +134,36 @@ struct ReviewView: View {
 struct CardView: View {
     let card: Card
     @Binding var showAnswer: Bool
+    @State private var isFlipped = false
     
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: 24) {
-                    Text(card.front ?? "")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 24)
-                    
-                    if showAnswer {
-                        Divider()
-                            .background(Color.hex("2C2C2E"))
-                        
-                        Text(card.back ?? "")
-                            .font(.system(size: 17, weight: .regular))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
+            ZStack {
+                // Front of card
+                frontView
+                    .opacity(isFlipped ? 0 : 1)
+                    .rotation3DEffect(
+                        .degrees(isFlipped ? 180 : 0),
+                        axis: (x: 0, y: 1, z: 0)
+                    )
+                
+                // Back of card
+                backView
+                    .opacity(isFlipped ? 1 : 0)
+                    .rotation3DEffect(
+                        .degrees(isFlipped ? 0 : -180),
+                        axis: (x: 0, y: 1, z: 0)
+                    )
             }
+            .animation(.easeInOut(duration: 0.5), value: isFlipped)
             
             if !showAnswer {
-                Button(action: { withAnimation { showAnswer.toggle() }}) {
+                Button(action: {
+                    withAnimation {
+                        showAnswer.toggle()
+                        isFlipped.toggle()
+                    }
+                }) {
                     Text("Show Answer")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.white)
@@ -176,6 +179,28 @@ struct CardView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.hex("2C2C2E"), lineWidth: 1)
         )
+    }
+    
+    private var frontView: some View {
+        ScrollView {
+            Text(card.front ?? "")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 24)
+                .padding(.horizontal, 24)
+        }
+    }
+    
+    private var backView: some View {
+        ScrollView {
+            Text(card.back ?? "")
+                .font(.system(size: 17, weight: .regular))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 24)
+                .padding(.horizontal, 24)
+        }
     }
 }
 
