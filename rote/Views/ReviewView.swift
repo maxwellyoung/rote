@@ -118,9 +118,30 @@ struct ReviewView: View {
     
     private func updateCard(_ card: Card, rating: ReviewRating) {
         let (newInterval, newEase) = calculateNextReview(card: card, rating: rating)
+        
+        // Update card properties
         card.interval = newInterval
         card.ease = newEase
         card.dueDate = Date().addingTimeInterval(newInterval * 86400) // Convert days to seconds
+        card.lastReviewDate = Date()
+        card.reviewCount += 1
+        
+        // Create new review record
+        let review = Review(context: viewContext)
+        review.date = Date()
+        review.rating = rating.rawValue
+        review.ease = newEase
+        review.interval = newInterval
+        review.card = card
+        
+        // Update streak
+        let calendar = Calendar.current
+        if let lastReview = card.lastReviewDate,
+           calendar.isDateInToday(lastReview) || calendar.isDateInYesterday(lastReview) {
+            card.streak += 1
+        } else {
+            card.streak = 1
+        }
         
         do {
             try viewContext.save()
@@ -174,6 +195,14 @@ enum ReviewRating {
     case again
     case good
     case easy
+    
+    var rawValue: Int {
+        switch self {
+        case .again: return 1
+        case .good: return 2
+        case .easy: return 3
+        }
+    }
 }
 
 struct CardView: View {

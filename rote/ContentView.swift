@@ -31,6 +31,12 @@ struct ContentView: View {
                     Label("Tags", systemImage: "tag.fill")
                 }
                 .tag(2)
+            
+            StatsView()
+                .tabItem {
+                    Label("Stats", systemImage: "chart.bar.fill")
+                }
+                .tag(3)
         }
         .accentColor(.blue)
         .preferredColorScheme(.dark)
