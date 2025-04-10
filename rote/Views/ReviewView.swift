@@ -33,19 +33,29 @@ struct ReviewView: View {
                 )
                 .edgesIgnoringSafeArea(.all)
                 
-                if dueCards.isEmpty {
-                    SharedEmptyStateView(
-                        systemImage: "checkmark.circle.fill",
-                        title: "All caught up!",
-                        message: "No cards due for review",
-                        tintColor: Color.hex("30D158")
-                    )
-                } else if currentCardIndex < dueCards.count {
-                    VStack(spacing: 24) {
+                VStack(spacing: 24) {
+                    // Stats summary
+                    HStack(spacing: 24) {
+                        StatBox(title: "Due", value: "\(dueCards.count)")
+                        StatBox(title: "Reviewed", value: "\(currentCardIndex)")
+                        StatBox(title: "Success", value: "85%")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    
+                    if dueCards.isEmpty {
+                        SharedEmptyStateView(
+                            systemImage: "checkmark.circle.fill",
+                            title: "All caught up!",
+                            message: "No cards due for review",
+                            tintColor: Color.hex("30D158")
+                        )
+                    } else if currentCardIndex < dueCards.count {
                         CardView(
                             card: dueCards[currentCardIndex],
                             showAnswer: $showAnswer
                         )
+                        .padding(.horizontal, 16)
                         
                         if showAnswer {
                             HStack(spacing: 16) {
@@ -61,21 +71,15 @@ struct ReviewView: View {
                                     RatingButton(rating: .easy)
                                 }
                             }
+                            .padding(.horizontal, 16)
                         }
                     }
-                    .padding(.horizontal, 16)
+                    
+                    Spacer()
                 }
             }
             .navigationTitle("Review")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showStats.toggle() }) {
-                        Image(systemName: "chart.line.uptrend.xyaxis")
-                            .foregroundColor(Color.hex("5E5CE6"))
-                    }
-                }
-            }
         }
     }
     
@@ -130,76 +134,125 @@ struct ReviewView: View {
     }
 }
 
+struct StatBox: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(Color.hex("8E8E93"))
+            
+            Text(value)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundColor(.white)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background(Color.hex("1C1C1E"))
+        .cornerRadius(12)
+    }
+}
+
 struct CardView: View {
     let card: Card
     @Binding var showAnswer: Bool
     @State private var isFlipped = false
     
     var body: some View {
-        VStack(spacing: 0) {
-            ZStack {
-                // Front of card
-                frontView
-                    .opacity(isFlipped ? 0 : 1)
-                    .rotation3DEffect(
-                        .degrees(isFlipped ? 180 : 0),
-                        axis: (x: 0, y: 1, z: 0)
-                    )
-                
-                // Back of card
-                backView
-                    .opacity(isFlipped ? 1 : 0)
-                    .rotation3DEffect(
-                        .degrees(isFlipped ? 0 : -180),
-                        axis: (x: 0, y: 1, z: 0)
-                    )
-            }
-            .animation(.easeInOut(duration: 0.5), value: isFlipped)
+        ZStack {
+            // Front of card
+            frontView
+                .opacity(isFlipped ? 0 : 1)
+                .rotation3DEffect(
+                    .degrees(isFlipped ? 180 : 0),
+                    axis: (x: 0, y: 1, z: 0)
+                )
             
-            if !showAnswer {
-                Button(action: {
-                    withAnimation {
-                        showAnswer.toggle()
-                        isFlipped.toggle()
-                    }
-                }) {
-                    Text("Show Answer")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Color.hex("5E5CE6"))
-                }
+            // Back of card
+            backView
+                .opacity(isFlipped ? 1 : 0)
+                .rotation3DEffect(
+                    .degrees(isFlipped ? 0 : -180),
+                    axis: (x: 0, y: 1, z: 0)
+                )
+        }
+        .animation(.easeInOut(duration: 0.5), value: isFlipped)
+        .frame(height: 400)
+        .onTapGesture {
+            withAnimation {
+                isFlipped.toggle()
+                showAnswer.toggle()
             }
         }
-        .background(Color.hex("1C1C1E"))
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.hex("2C2C2E"), lineWidth: 1)
-        )
     }
     
     private var frontView: some View {
-        ScrollView {
+        VStack(alignment: .leading, spacing: 24) {
             Text(card.front ?? "")
-                .font(.system(size: 20, weight: .medium))
+                .font(.system(size: 24, weight: .medium))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 24)
-                .padding(.horizontal, 24)
+            
+            if let tags = card.tags {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(tags, id: \.self) { tag in
+                            Text(tag)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(Color.hex("5E5CE6"))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.hex("5E5CE6").opacity(0.1))
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            Text("Tap to flip")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(Color.hex("8E8E93"))
         }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.hex("1C1C1E"))
+        .cornerRadius(16)
     }
     
     private var backView: some View {
-        ScrollView {
+        VStack(alignment: .leading, spacing: 24) {
             Text(card.back ?? "")
-                .font(.system(size: 17, weight: .regular))
+                .font(.system(size: 20, weight: .regular))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 24)
-                .padding(.horizontal, 24)
+            
+            Spacer()
+            
+            HStack(spacing: 16) {
+                HStack(spacing: 4) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 13))
+                    Text("\(String(format: "%.1f", card.interval))d")
+                        .font(.system(size: 13, weight: .medium))
+                }
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "flame")
+                        .font(.system(size: 13))
+                    Text("\(card.streak)")
+                        .font(.system(size: 13, weight: .medium))
+                }
+            }
+            .foregroundColor(Color.hex("8E8E93"))
         }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.hex("1C1C1E"))
+        .cornerRadius(16)
     }
 }
 

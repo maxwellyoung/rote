@@ -19,135 +19,73 @@ struct StatsView: View {
             ZStack {
                 // Background gradient
                 LinearGradient(
-                    gradient: Gradient(colors: [Color(hex: "1A1A1A"), Color(hex: "0A0A0A")]),
+                    gradient: Gradient(colors: [Color.hex("1A1A1A"), Color.hex("0A0A0A")]),
                     startPoint: .top,
                     endPoint: .bottom
                 )
                 .edgesIgnoringSafeArea(.all)
                 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Time range picker
-                        TimeRangePicker(selectedRange: $selectedRange)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 8)
-                        
-                        // Stats grid
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 16) {
-                            StatCard(
-                                title: "Reviews",
-                                value: "\(stats.totalReviews)",
-                                icon: "chart.bar.fill",
-                                color: Color(hex: "5E5CE6")
-                            )
-                            StatCard(
-                                title: "Retention",
-                                value: "\(Int(stats.retentionRate * 100))%",
-                                icon: "brain.head.profile",
-                                color: Color(hex: "34C759")
-                            )
-                            StatCard(
-                                title: "Due Today",
-                                value: "\(stats.dueToday)",
-                                icon: "calendar",
-                                color: Color(hex: "FF9500")
-                            )
-                            StatCard(
-                                title: "Streak",
-                                value: "\(stats.currentStreak) days",
-                                icon: "flame.fill",
-                                color: Color(hex: "FF3B30")
-                            )
+                VStack(spacing: 24) {
+                    // Today's stats
+                    VStack(spacing: 16) {
+                        HStack {
+                            Text("Today")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(Color.hex("8E8E93"))
+                            Spacer()
                         }
-                        .padding(.horizontal, 16)
                         
-                        // Review quality
-                        VStack(alignment: .leading, spacing: 20) {
-                            Text("Review Quality")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(.white)
-                            
-                            VStack(spacing: 16) {
-                                // Progress bars
-                                ReviewQualityBar(
-                                    label: "Again",
-                                    value: stats.againPercentage,
-                                    total: stats.againPercentage + stats.goodPercentage + stats.easyPercentage,
-                                    color: Color(hex: "FF3B30")
-                                )
-                                ReviewQualityBar(
-                                    label: "Good",
-                                    value: stats.goodPercentage,
-                                    total: stats.againPercentage + stats.goodPercentage + stats.easyPercentage,
-                                    color: Color(hex: "34C759")
-                                )
-                                ReviewQualityBar(
-                                    label: "Easy",
-                                    value: stats.easyPercentage,
-                                    total: stats.againPercentage + stats.goodPercentage + stats.easyPercentage,
-                                    color: Color(hex: "5E5CE6")
-                                )
-                            }
-                        }
-                        .padding(20)
-                        .background(Color(hex: "1C1C1E"))
-                        .cornerRadius(16)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color(hex: "2C2C2E"), lineWidth: 1)
-                        )
-                        .padding(.horizontal, 16)
-                        
-                        // Tag distribution
-                        VStack(alignment: .leading, spacing: 20) {
-                            Text("Cards by Tag")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(.white)
-                            
-                            VStack(spacing: 16) {
-                                ForEach(stats.tagCounts.sorted(by: { $0.value > $1.value }), id: \.key) { tag, count in
-                                    HStack {
-                                        HStack(spacing: 12) {
-                                            Circle()
-                                                .fill(Color(hex: "5E5CE6").opacity(0.2))
-                                                .frame(width: 32, height: 32)
-                                                .overlay(
-                                                    Image(systemName: "tag.fill")
-                                                        .font(.system(size: 12))
-                                                        .foregroundColor(Color(hex: "5E5CE6"))
-                                                )
-                                            
-                                            Text(tag)
-                                                .font(.system(size: 15, weight: .medium))
-                                                .foregroundColor(.white)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        Text("\(count)")
-                                            .font(.system(size: 15, weight: .medium))
-                                            .foregroundColor(Color(hex: "8E8E93"))
-                                    }
-                                    .padding(.vertical, 4)
-                                }
-                            }
-                        }
-                        .padding(20)
-                        .background(Color(hex: "1C1C1E"))
-                        .cornerRadius(16)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color(hex: "2C2C2E"), lineWidth: 1)
-                        )
-                        .padding(.horizontal, 16)
+                        Text("12")
+                            .font(.system(size: 48, weight: .medium))
+                            .foregroundColor(.white)
                     }
-                    .padding(.bottom, 24)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(24)
+                    .background(Color.hex("1C1C1E"))
+                    .cornerRadius(16)
+                    
+                    // Weekly stats
+                    VStack(spacing: 16) {
+                        HStack {
+                            Text("Last 7 Days")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(Color.hex("8E8E93"))
+                            Spacer()
+                        }
+                        
+                        Text("84")
+                            .font(.system(size: 48, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(24)
+                    .background(Color.hex("1C1C1E"))
+                    .cornerRadius(16)
+                    
+                    // Monthly stats
+                    VStack(spacing: 16) {
+                        HStack {
+                            Text("Last 30 Days")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(Color.hex("8E8E93"))
+                            Spacer()
+                        }
+                        
+                        Text("342")
+                            .font(.system(size: 48, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(24)
+                    .background(Color.hex("1C1C1E"))
+                    .cornerRadius(16)
+                    
+                    Spacer()
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
             }
-            .navigationTitle("Statistics")
+            .navigationTitle("Stats")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
