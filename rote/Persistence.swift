@@ -6,6 +6,7 @@
 //
 
 import CoreData
+import SwiftUI
 
 struct PersistenceController {
     static let shared = PersistenceController()
@@ -25,7 +26,6 @@ struct PersistenceController {
                   back: "Dependency injection is a design pattern where objects receive their dependencies from external sources rather than creating them internally. This promotes loose coupling and makes code more testable.",
                   tags: ["programming", "architecture"])
         
-        // Sample language cards
         createCard(in: viewContext,
                   front: "Comment dit-on 'hello' en français?",
                   back: "Bonjour",
@@ -36,13 +36,11 @@ struct PersistenceController {
                   back: "Hello (formal, used during the day)",
                   tags: ["japanese", "greetings"])
         
-        // Sample science cards
         createCard(in: viewContext,
                   front: "What is the second law of thermodynamics?",
                   back: "The total entropy of an isolated system always increases over time. Heat flows spontaneously from hot to cold objects, but not the reverse.",
                   tags: ["physics", "thermodynamics"])
         
-        // Sample math cards
         createCard(in: viewContext,
                   front: "What is Euler's number (e)?",
                   back: "e ≈ 2.71828... is a mathematical constant that is the base of natural logarithms. It's the limit of (1 + 1/n)^n as n approaches infinity.",
@@ -61,26 +59,79 @@ struct PersistenceController {
 
     init(inMemory: Bool = false) {
         container = NSPersistentContainer(name: "rote")
+        
+        // Configure the persistent store
         if inMemory {
             container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
+        } else {
+            // Get the default directory for the app
+            let storeDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            
+            // Create a directory for our database if it doesn't exist
+            let dataDirectory = storeDirectory.appendingPathComponent("Database", isDirectory: true)
+            try? FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true)
+            
+            // Set up the store URL
+            let storeURL = dataDirectory.appendingPathComponent("rote.sqlite")
+            
+            // Configure the persistent store
+            let description = NSPersistentStoreDescription(url: storeURL)
+            description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
+            description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+            container.persistentStoreDescriptions = [description]
         }
-        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
+        
+        // Load the persistent stores
+        container.loadPersistentStores { (storeDescription, error) in
             if let error = error as NSError? {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-
-                /*
-                 Typical reasons for an error here include:
-                 * The parent directory does not exist, cannot be created, or disallows writing.
-                 * The persistent store is not accessible, due to permissions or data protection when the device is locked.
-                 * The device is out of space.
-                 * The store could not be migrated to the current model version.
-                 Check the error message to determine what the actual problem was.
-                 */
-                fatalError("Unresolved error \(error), \(error.userInfo)")
+                // Log the error details
+                print("Error loading persistent store: \(error), \(error.userInfo)")
+                
+                // Handle common errors
+                switch error.code {
+                case NSPersistentStoreIncompatibleVersionHashError:
+                    // Handle model version mismatch
+                    print("⚠️ Incompatible model version. Migration needed.")
+                case NSMigrationMissingSourceModelError:
+                    // Handle missing model
+                    print("⚠️ Missing source model.")
+                default:
+                    print("⚠️ Unhandled error: \(error.localizedDescription)")
+                }
+                
+                // In development, we might want to delete the store and start fresh
+                #if DEBUG
+                try? FileManager.default.removeItem(at: storeDescription.url!)
+                fatalError("Unresolved Core Data error: \(error)")
+                #else
+                // In production, we should handle this more gracefully
+                print("⚠️ Core Data store error. The app will continue with an empty store.")
+                #endif
             }
-        })
+        }
+        
+        // Configure the view context
         container.viewContext.automaticallyMergesChangesFromParent = true
+        container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        
+        // Set up automatic saving
+        #if os(iOS)
+        NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { _ in
+            self.save()
+        }
+        #endif
+    }
+    
+    // Helper function to save changes
+    func save() {
+        let context = container.viewContext
+        if context.hasChanges {
+            do {
+                try context.save()
+            } catch {
+                print("Error saving context: \(error)")
+            }
+        }
     }
     
     // Helper function to create sample cards
@@ -100,5 +151,8 @@ struct PersistenceController {
         card.dueDate = Date()
         card.createdAt = Date()
         card.modifiedAt = Date()
+        card.streak = 0
+        card.reviewCount = 0
+        card.lastReviewDate = nil
     }
 }

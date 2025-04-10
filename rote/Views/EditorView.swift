@@ -181,11 +181,16 @@ struct EditorView: View {
         newCard.front = viewModel.front
         newCard.back = viewModel.back
         newCard.tags = viewModel.tags
-        newCard.interval = 1.0
-        newCard.ease = 2.5
-        newCard.dueDate = Date()
+        
+        // Initialize review state
+        newCard.interval = 0.0  // Start with 0 interval for new cards
+        newCard.ease = 2.5     // Default ease factor
+        newCard.dueDate = Date() // Due immediately
+        newCard.streak = 0
+        newCard.reviewCount = 0
         newCard.createdAt = Date()
         newCard.modifiedAt = Date()
+        newCard.lastReviewDate = nil
         
         do {
             try viewContext.save()

@@ -1,6 +1,12 @@
 import SwiftUI
 import CoreData
 
+enum ReviewRating: String {
+    case again = "Again"
+    case good = "Good"
+    case easy = "Easy"
+}
+
 struct ReviewView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @FetchRequest(
@@ -150,6 +156,7 @@ struct ReviewView: View {
         
         // Create new review record
         let review = Review(context: viewContext)
+        review.id = UUID()
         review.date = Date()
         review.rating = rating.rawValue
         review.ease = newEase
@@ -200,23 +207,14 @@ struct ReviewView: View {
                 interval = 7.0
             } else {
                 // Easy review, increase interval more
-                interval *= (ease * 1.3)
+                interval *= ease * 1.3
             }
             // Increase ease
             ease = min(2.5, ease + 0.15)
         }
         
-        // Ensure minimum interval of 1 day
-        interval = max(1.0, interval)
-        
         return (interval, ease)
     }
-}
-
-enum ReviewRating: String {
-    case again = "again"
-    case good = "good"
-    case easy = "easy"
 }
 
 struct CardView: View {
