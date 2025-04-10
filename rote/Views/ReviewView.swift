@@ -12,6 +12,10 @@ struct ReviewView: View {
     @State private var color: Color = .black
     @State private var showingAnswer = false
     
+    // Haptic feedback generators
+    private let impactMed = UIImpactFeedbackGenerator(style: .medium)
+    private let impactLight = UIImpactFeedbackGenerator(style: .light)
+    
     var body: some View {
         NavigationView {
             ZStack {
@@ -26,25 +30,35 @@ struct ReviewView: View {
                                 .onChanged { gesture in
                                     offset = gesture.translation
                                     withAnimation {
-                                        color = offset.width > 0 ? .green : .red
+                                        color = getColorForOffset(offset.width)
+                                    }
+                                    // Light haptic when dragging
+                                    if abs(offset.width).truncatingRemainder(dividingBy: 50) < 1 {
+                                        impactLight.impactOccurred()
                                     }
                                 }
                                 .onEnded { _ in
-                                    withAnimation {
-                                        swipeCard(width: offset.width)
-                                        color = .black
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                                        handleSwipe(width: offset.width)
                                     }
                                 }
                         )
+                        .animation(.spring(response: 0.5, dampingFraction: 0.6), value: offset)
                 } else {
-                    VStack {
+                    VStack(spacing: 20) {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 60))
+                            .font(.system(size: 70))
                             .foregroundColor(.green)
                         Text("All caught up!")
                             .font(.title)
+                            .fontWeight(.medium)
                             .foregroundColor(.white)
+                        Text("Come back later for more cards")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
                     }
+                    .transition(.opacity)
+                    .animation(.easeInOut, value: cards.isEmpty)
                 }
             }
             .navigationTitle("Review")
@@ -52,14 +66,25 @@ struct ReviewView: View {
         }
     }
     
-    private func swipeCard(width: CGFloat) {
+    private func getColorForOffset(_ width: CGFloat) -> Color {
+        let normalizedWidth = abs(width) / UIScreen.main.bounds.width
+        if width > 0 {
+            return .green.opacity(min(normalizedWidth, 0.8))
+        } else {
+            return .red.opacity(min(normalizedWidth, 0.8))
+        }
+    }
+    
+    private func handleSwipe(width: CGFloat) {
         switch width {
         case -500...(-150):
             // Swipe left - Again
+            impactMed.impactOccurred()
             updateCard(cards.first!, rating: .again)
             offset = CGSize(width: -500, height: 0)
         case 150...500:
             // Swipe right - Good
+            impactMed.impactOccurred()
             updateCard(cards.first!, rating: .good)
             offset = CGSize(width: 500, height: 0)
         default:
@@ -74,7 +99,6 @@ struct ReviewView: View {
     }
     
     private func updateCard(_ card: Card, rating: ReviewRating) {
-        // TODO: Implement SM-2 algorithm
         let newInterval = calculateNewInterval(card: card, rating: rating)
         card.interval = newInterval
         card.dueDate = Date().addingTimeInterval(newInterval * 86400) // Convert days to seconds
@@ -92,7 +116,7 @@ struct ReviewView: View {
         case .again:
             return 1.0 // Review tomorrow
         case .good:
-            return card.interval * 2.5 // Double the interval
+            return max(1.0, card.interval * 2.5) // Double the interval, minimum 1 day
         }
     }
 }
@@ -110,29 +134,69 @@ struct CardView: View {
         VStack {
             Spacer()
             
-            Text(showingAnswer ? (card.back ?? "") : (card.front ?? ""))
-                .font(.system(size: 24, weight: .medium, design: .rounded))
-                .foregroundColor(.white)
-                .multilineTextAlignment(.center)
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color.gray.opacity(0.2))
-                .cornerRadius(16)
-                .padding()
-                .onTapGesture {
-                    withAnimation {
-                        showingAnswer.toggle()
+            VStack(spacing: 20) {
+                Text(showingAnswer ? (card.back ?? "") : (card.front ?? ""))
+                    .font(.system(size: 24, weight: .medium, design: .rounded))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 150)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.gray.opacity(0.2))
+                            .shadow(color: .white.opacity(0.1), radius: 10, x: 0, y: 0)
+                    )
+                    .padding(.horizontal)
+                
+                if !showingAnswer {
+                    Text("Tap to reveal")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .padding(.bottom)
+                }
+                
+                if let tags = card.tags {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack {
+                            ForEach(tags, id: \.self) { tag in
+                                Text(tag)
+                                    .font(.caption)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.blue.opacity(0.2))
+                                    .cornerRadius(12)
+                            }
+                        }
+                        .padding(.horizontal)
                     }
                 }
+            }
+            .frame(maxWidth: .infinity)
+            .onTapGesture {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                    showingAnswer.toggle()
+                }
+            }
             
             Spacer()
             
-            if !showingAnswer {
-                Text("Tap to reveal")
-                    .font(.caption)
+            HStack(spacing: 40) {
+                Image(systemName: "arrow.left")
+                    .foregroundColor(.red)
+                    .opacity(0.8)
+                Text("Again")
                     .foregroundColor(.gray)
-                    .padding()
+                Spacer()
+                Text("Good")
+                    .foregroundColor(.gray)
+                Image(systemName: "arrow.right")
+                    .foregroundColor(.green)
+                    .opacity(0.8)
             }
+            .font(.subheadline)
+            .padding(.horizontal, 40)
+            .padding(.bottom, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black)
