@@ -82,7 +82,6 @@ struct ReviewView: View {
     private func updateCard(_ rating: ReviewRating) {
         let card = dueCards[currentCardIndex]
         let review = Review(context: viewContext)
-        review.id = UUID()
         review.date = Date()
         review.rating = rating.rawValue
         review.card = card
