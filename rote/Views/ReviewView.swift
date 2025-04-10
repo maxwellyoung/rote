@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreData
 
 struct ReviewView: View {
     @Environment(\.managedObjectContext) private var viewContext
