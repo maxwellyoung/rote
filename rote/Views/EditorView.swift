@@ -5,6 +5,7 @@ struct EditorView: View {
     @StateObject private var viewModel = CardViewModel()
     @State private var showingTags = false
     @State private var newTag = ""
+    @Binding var selectedTab: Int
     
     var body: some View {
         NavigationView {
@@ -40,8 +41,18 @@ struct EditorView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         saveCard()
+                        // Switch to Review tab after saving
+                        selectedTab = 0
                     }
                     .disabled(!viewModel.isValid)
+                }
+                
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        viewModel.reset()
+                        // Switch to Review tab
+                        selectedTab = 0
+                    }
                 }
             }
             .sheet(isPresented: $showingTags) {
@@ -100,7 +111,7 @@ struct EditorView: View {
 
 struct EditorView_Previews: PreviewProvider {
     static var previews: some View {
-        EditorView()
+        EditorView(selectedTab: .constant(0))
             .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
     }
 } 

@@ -17,10 +17,10 @@
         <relationship name="reviews" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Review" inverseName="card" inverseEntity="Review"/>
     </entity>
     <entity name="Review" representedClassName=".Review" syncable="YES" codeGenerationType="class">
-        <attribute name="date" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="date" attributeType="Date" defaultDateTimeInterval="0" usesScalarValueType="NO"/>
         <attribute name="ease" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="interval" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
-        <attribute name="rating" attributeType="String"/>
+        <attribute name="rating" attributeType="String" defaultValueString="good"/>
         <relationship name="card" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Card" inverseName="reviews" inverseEntity="Card"/>
     </entity>
     <elements>

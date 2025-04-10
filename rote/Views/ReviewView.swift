@@ -191,18 +191,10 @@ struct ReviewView: View {
     }
 }
 
-enum ReviewRating {
-    case again
-    case good
-    case easy
-    
-    var rawValue: Int {
-        switch self {
-        case .again: return 1
-        case .good: return 2
-        case .easy: return 3
-        }
-    }
+enum ReviewRating: String {
+    case again = "again"
+    case good = "good"
+    case easy = "easy"
 }
 
 struct CardView: View {

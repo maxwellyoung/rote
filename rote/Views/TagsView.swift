@@ -1,35 +1,40 @@
 import SwiftUI
+import CoreData
 
 struct TagsView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Card.dueDate, ascending: true)],
+        sortDescriptors: [NSSortDescriptor(keyPath: \Card.createdAt, ascending: true)],
         animation: .default)
     private var cards: FetchedResults<Card>
     
-    @State private var selectedTag: String? = nil
-    
-    private var allTags: [String] {
-        Array(Set(cards.flatMap { $0.tags ?? [] })).sorted()
+    private var tagGroups: [String: [Card]] {
+        var groups: [String: [Card]] = [:]
+        for card in cards {
+            for tag in (card.tags ?? []) {
+                if groups[tag] == nil {
+                    groups[tag] = []
+                }
+                groups[tag]?.append(card)
+            }
+        }
+        return groups
     }
     
     var body: some View {
         NavigationView {
             List {
-                if allTags.isEmpty {
+                if tagGroups.isEmpty {
                     Text("No tags yet")
                         .foregroundColor(.gray)
                 } else {
-                    ForEach(allTags, id: \.self) { tag in
-                        NavigationLink(
-                            destination: TaggedCardsView(tag: tag),
-                            tag: tag,
-                            selection: $selectedTag
-                        ) {
+                    ForEach(Array(tagGroups.keys).sorted(), id: \.self) { tag in
+                        NavigationLink(destination: TagDetailView(tag: tag, cards: tagGroups[tag] ?? [])) {
                             HStack {
                                 Text(tag)
+                                    .foregroundColor(.white)
                                 Spacer()
-                                Text("\(cards.filter { ($0.tags ?? []).contains(tag) }.count)")
+                                Text("\(tagGroups[tag]?.count ?? 0)")
                                     .foregroundColor(.gray)
                             }
                         }
@@ -42,35 +47,35 @@ struct TagsView: View {
     }
 }
 
-struct TaggedCardsView: View {
+struct TagDetailView: View {
     let tag: String
-    @Environment(\.managedObjectContext) private var viewContext
-    
-    @FetchRequest private var taggedCards: FetchedResults<Card>
-    
-    init(tag: String) {
-        self.tag = tag
-        _taggedCards = FetchRequest<Card>(
-            sortDescriptors: [NSSortDescriptor(keyPath: \Card.dueDate, ascending: true)],
-            predicate: NSPredicate(format: "ANY tags == %@", tag),
-            animation: .default
-        )
-    }
+    let cards: [Card]
     
     var body: some View {
         List {
-            ForEach(taggedCards) { card in
-                VStack(alignment: .leading, spacing: 8) {
+            ForEach(cards, id: \.id) { card in
+                VStack(alignment: .leading, spacing: 12) {
                     Text(card.front ?? "")
                         .font(.headline)
+                        .foregroundColor(.white)
+                    
                     Text(card.back ?? "")
                         .font(.subheadline)
                         .foregroundColor(.gray)
-                    Text("Due: \(card.dueDate ?? Date(), formatter: dateFormatter)")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                    
+                    HStack {
+                        Text("Due: \(card.dueDate ?? Date(), formatter: dateFormatter)")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        
+                        Spacer()
+                        
+                        Text("Interval: \(String(format: "%.1f", card.interval)) days")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, 8)
             }
         }
         .navigationTitle(tag)

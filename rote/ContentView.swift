@@ -20,7 +20,7 @@ struct ContentView: View {
                 }
                 .tag(0)
             
-            EditorView()
+            EditorView(selectedTab: $selectedTab)
                 .tabItem {
                     Label("New", systemImage: "plus.circle.fill")
                 }
