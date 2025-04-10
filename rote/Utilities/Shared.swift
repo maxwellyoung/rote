@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: - Shared Components
-struct EmptyStateView: View {
+struct SharedEmptyStateView: View {
     let systemImage: String
     let title: String
     let message: String
@@ -42,7 +42,7 @@ struct EmptyStateView: View {
 
 // MARK: - Extensions
 extension Color {
-    init(hex: String) {
+    static func hex(_ hex: String) -> Color {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0
         Scanner(string: hex).scanHexInt64(&int)
@@ -57,7 +57,7 @@ extension Color {
         default:
             (a, r, g, b) = (255, 0, 0, 0)
         }
-        self.init(
+        return Color(
             .sRGB,
             red: Double(r) / 255,
             green: Double(g) / 255,

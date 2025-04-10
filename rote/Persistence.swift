@@ -116,8 +116,8 @@ struct PersistenceController {
         
         // Set up automatic saving
         #if os(iOS)
-        NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { _ in
-            self.save()
+        NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.save()
         }
         #endif
     }

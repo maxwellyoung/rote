@@ -26,14 +26,19 @@ struct TagsView: View {
             ZStack {
                 // Background gradient
                 LinearGradient(
-                    gradient: Gradient(colors: [Color(hex: "1A1A1A"), Color(hex: "0A0A0A")]),
+                    gradient: Gradient(colors: [Color.hex("1A1A1A"), Color.hex("0A0A0A")]),
                     startPoint: .top,
                     endPoint: .bottom
                 )
                 .edgesIgnoringSafeArea(.all)
                 
                 if tagGroups.isEmpty {
-                    EmptyStateView()
+                    SharedEmptyStateView(
+                        systemImage: "tag.circle.fill",
+                        title: "No tags yet",
+                        message: "Add tags to your cards to organize them",
+                        tintColor: Color.hex("5E5CE6")
+                    )
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 12) {
@@ -54,7 +59,7 @@ struct TagsView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {}) {
                         Image(systemName: "plus.circle.fill")
-                            .foregroundColor(Color(hex: "5E5CE6"))
+                            .foregroundColor(Color.hex("5E5CE6"))
                     }
                 }
             }
@@ -70,11 +75,11 @@ struct TagRowView: View {
         HStack {
             HStack(spacing: 12) {
                 Circle()
-                    .fill(Color(hex: "5E5CE6").opacity(0.2))
+                    .fill(Color.hex("5E5CE6").opacity(0.2))
                     .frame(width: 40, height: 40)
                     .overlay(
                         Image(systemName: "tag.fill")
-                            .foregroundColor(Color(hex: "5E5CE6"))
+                            .foregroundColor(Color.hex("5E5CE6"))
                     )
                 
                 VStack(alignment: .leading, spacing: 4) {
@@ -84,21 +89,21 @@ struct TagRowView: View {
                     
                     Text("\(count) card\(count == 1 ? "" : "s")")
                         .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color.hex("8E8E93"))
                 }
                 
                 Spacer()
                 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .foregroundColor(Color.hex("8E8E93"))
             }
             .padding(16)
-            .background(Color(hex: "1C1C1E"))
+            .background(Color.hex("1C1C1E"))
             .cornerRadius(16)
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color(hex: "2C2C2E"), lineWidth: 1)
+                    .stroke(Color.hex("2C2C2E"), lineWidth: 1)
             )
         }
     }
@@ -112,7 +117,7 @@ struct TagDetailView: View {
         ZStack {
             // Background gradient
             LinearGradient(
-                gradient: Gradient(colors: [Color(hex: "1A1A1A"), Color(hex: "0A0A0A")]),
+                gradient: Gradient(colors: [Color.hex("1A1A1A"), Color.hex("0A0A0A")]),
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -145,7 +150,7 @@ struct CardPreviewView: View {
             
             Text(card.back ?? "")
                 .font(.system(size: 15, weight: .regular))
-                .foregroundColor(Color(hex: "8E8E93"))
+                .foregroundColor(Color.hex("8E8E93"))
                 .lineLimit(3)
             
             HStack(spacing: 16) {
@@ -163,63 +168,15 @@ struct CardPreviewView: View {
                         .font(.system(size: 12, weight: .medium))
                 }
             }
-            .foregroundColor(Color(hex: "8E8E93"))
+            .foregroundColor(Color.hex("8E8E93"))
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: "1C1C1E"))
+        .background(Color.hex("1C1C1E"))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(hex: "2C2C2E"), lineWidth: 1)
-        )
-    }
-}
-
-struct EmptyStateView: View {
-    var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "tag.circle.fill")
-                .font(.system(size: 64))
-                .foregroundColor(Color(hex: "5E5CE6"))
-            
-            VStack(spacing: 8) {
-                Text("No tags yet")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
-                
-                Text("Add tags to your cards to organize them")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color(hex: "8E8E93"))
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .padding(.horizontal, 40)
-    }
-}
-
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 3:
-            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6:
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8:
-            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (255, 0, 0, 0)
-        }
-        self.init(
-            .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue: Double(b) / 255,
-            opacity: Double(a) / 255
+                .stroke(Color.hex("2C2C2E"), lineWidth: 1)
         )
     }
 }
