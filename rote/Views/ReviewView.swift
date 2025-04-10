@@ -23,23 +23,24 @@ struct ReviewView: View {
                 
                 if let card = cards.first {
                     CardView(card: card, showingAnswer: $showingAnswer)
-                        .offset(x: offset.width, y: 0)
+                        .offset(x: offset.width, y: offset.height)
                         .rotationEffect(.degrees(Double(offset.width / 40)))
                         .gesture(
                             DragGesture()
                                 .onChanged { gesture in
                                     offset = gesture.translation
                                     withAnimation {
-                                        color = getColorForOffset(offset.width)
+                                        color = getColorForGesture(offset)
                                     }
                                     // Light haptic when dragging
-                                    if abs(offset.width).truncatingRemainder(dividingBy: 50) < 1 {
+                                    if abs(offset.width).truncatingRemainder(dividingBy: 50) < 1 ||
+                                       abs(offset.height).truncatingRemainder(dividingBy: 50) < 1 {
                                         impactLight.impactOccurred()
                                     }
                                 }
                                 .onEnded { _ in
                                     withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                                        handleSwipe(width: offset.width)
+                                        handleSwipe(offset)
                                     }
                                 }
                         )
@@ -66,29 +67,46 @@ struct ReviewView: View {
         }
     }
     
-    private func getColorForOffset(_ width: CGFloat) -> Color {
-        let normalizedWidth = abs(width) / UIScreen.main.bounds.width
-        if width > 0 {
-            return .green.opacity(min(normalizedWidth, 0.8))
+    private func getColorForGesture(_ gesture: CGSize) -> Color {
+        if abs(gesture.height) > abs(gesture.width) && gesture.height < 0 {
+            // Swiping up - Easy
+            let normalizedHeight = min(abs(gesture.height) / UIScreen.main.bounds.height, 0.8)
+            return .blue.opacity(normalizedHeight)
         } else {
-            return .red.opacity(min(normalizedWidth, 0.8))
+            // Swiping horizontally
+            let normalizedWidth = abs(gesture.width) / UIScreen.main.bounds.width
+            if gesture.width > 0 {
+                return .green.opacity(min(normalizedWidth, 0.8))
+            } else {
+                return .red.opacity(min(normalizedWidth, 0.8))
+            }
         }
     }
     
-    private func handleSwipe(width: CGFloat) {
-        switch width {
-        case -500...(-150):
-            // Swipe left - Again
+    private func handleSwipe(_ gesture: CGSize) {
+        let card = cards.first!
+        
+        // Determine the primary direction of the swipe
+        if abs(gesture.height) > abs(gesture.width) && gesture.height < -100 {
+            // Swipe up - Easy
             impactMed.impactOccurred()
-            updateCard(cards.first!, rating: .again)
-            offset = CGSize(width: -500, height: 0)
-        case 150...500:
-            // Swipe right - Good
-            impactMed.impactOccurred()
-            updateCard(cards.first!, rating: .good)
-            offset = CGSize(width: 500, height: 0)
-        default:
-            offset = .zero
+            updateCard(card, rating: .easy)
+            offset = CGSize(width: 0, height: -500)
+        } else {
+            switch gesture.width {
+            case -500...(-150):
+                // Swipe left - Again
+                impactMed.impactOccurred()
+                updateCard(card, rating: .again)
+                offset = CGSize(width: -500, height: 0)
+            case 150...500:
+                // Swipe right - Good
+                impactMed.impactOccurred()
+                updateCard(card, rating: .good)
+                offset = CGSize(width: 500, height: 0)
+            default:
+                offset = .zero
+            }
         }
         
         // Reset position after animation
@@ -99,8 +117,9 @@ struct ReviewView: View {
     }
     
     private func updateCard(_ card: Card, rating: ReviewRating) {
-        let newInterval = calculateNewInterval(card: card, rating: rating)
+        let (newInterval, newEase) = calculateNextReview(card: card, rating: rating)
         card.interval = newInterval
+        card.ease = newEase
         card.dueDate = Date().addingTimeInterval(newInterval * 86400) // Convert days to seconds
         
         do {
@@ -110,20 +129,51 @@ struct ReviewView: View {
         }
     }
     
-    private func calculateNewInterval(card: Card, rating: ReviewRating) -> Double {
-        // Simplified SM-2 implementation
+    private func calculateNextReview(card: Card, rating: ReviewRating) -> (interval: Double, ease: Double) {
+        // Implementation of the SM-2 algorithm
+        var ease = card.ease
+        var interval = card.interval
+        
         switch rating {
         case .again:
-            return 1.0 // Review tomorrow
+            // Failed recall, reset interval and reduce ease
+            ease = max(1.3, ease - 0.2)
+            interval = 1.0
+            
         case .good:
-            return max(1.0, card.interval * 2.5) // Double the interval, minimum 1 day
+            if interval <= 1.0 {
+                // First successful recall
+                interval = 4.0
+            } else {
+                // Regular review, increase interval
+                interval *= ease
+            }
+            // Small ease adjustment
+            ease = max(1.3, ease - 0.08)
+            
+        case .easy:
+            if interval <= 1.0 {
+                // First successful recall with high confidence
+                interval = 7.0
+            } else {
+                // Easy review, increase interval more
+                interval *= (ease * 1.3)
+            }
+            // Increase ease
+            ease = min(2.5, ease + 0.15)
         }
+        
+        // Ensure minimum interval of 1 day
+        interval = max(1.0, interval)
+        
+        return (interval, ease)
     }
 }
 
 enum ReviewRating {
     case again
     case good
+    case easy
 }
 
 struct CardView: View {
@@ -196,7 +246,12 @@ struct CardView: View {
             }
             .font(.subheadline)
             .padding(.horizontal, 40)
-            .padding(.bottom, 20)
+            .padding(.vertical, 8)
+            
+            Text("Swipe up for Easy")
+                .font(.caption)
+                .foregroundColor(.blue)
+                .padding(.bottom, 12)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black)
