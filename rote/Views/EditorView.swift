@@ -230,29 +230,50 @@ struct EditorCardView: View {
     let title: String
     @Binding var text: String
     let placeholder: String
+    @State private var showPreview = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(title)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(.white)
-            
-            TextEditor(text: $text)
-                .placeholder(when: text.isEmpty) {
-                    Text(placeholder)
-                        .foregroundColor(Color.hex("8E8E93"))
+            HStack {
+                Text(title)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                Button(action: { showPreview.toggle() }) {
+                    Image(systemName: showPreview ? "text.alignleft" : "eye")
+                        .foregroundColor(Color.hex("5E5CE6"))
                 }
-                .font(.system(size: 17))
-                .foregroundColor(.white)
-                .frame(minHeight: 120)
-                .scrollContentBackground(.hidden)
-                .padding(16)
-                .background(Color.hex("1C1C1E"))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.hex("2C2C2E"), lineWidth: 1)
-                )
+            }
+            
+            if showPreview {
+                MarkdownView(text: text)
+                    .padding(16)
+                    .background(Color.hex("1C1C1E"))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.hex("2C2C2E"), lineWidth: 1)
+                    )
+            } else {
+                TextEditor(text: $text)
+                    .placeholder(when: text.isEmpty) {
+                        Text(placeholder)
+                            .foregroundColor(Color.hex("8E8E93"))
+                    }
+                    .font(.system(size: 17))
+                    .foregroundColor(.white)
+                    .frame(minHeight: 120)
+                    .scrollContentBackground(.hidden)
+                    .padding(16)
+                    .background(Color.hex("1C1C1E"))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.hex("2C2C2E"), lineWidth: 1)
+                    )
+            }
         }
         .padding(16)
         .background(Color.hex("1C1C1E"))

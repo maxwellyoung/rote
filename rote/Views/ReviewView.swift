@@ -5,6 +5,33 @@ enum ReviewRating: String {
     case again = "Again"
     case good = "Good"
     case easy = "Easy"
+    
+    var feedback: String {
+        switch self {
+        case .again:
+            return "This thought needs more time to take root. Like a seed in spring, it needs nurturing."
+        case .good:
+            return "You're building a strong foundation. Each review strengthens your understanding."
+        case .easy:
+            return "You've engraved this thought in stone. It's now part of your mental landscape."
+        }
+    }
+    
+    var color: Color {
+        switch self {
+        case .again: return Color.hex("FF453A")
+        case .good: return Color.hex("30D158")
+        case .easy: return Color.hex("0A84FF")
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .again: return "leaf.fill"
+        case .good: return "building.2.fill"
+        case .easy: return "mountain.2.fill"
+        }
+    }
 }
 
 struct ReviewView: View {
@@ -190,9 +217,7 @@ struct CardView: View {
     
     private var frontView: some View {
         VStack(alignment: .leading, spacing: 24) {
-            Text(card.front ?? "")
-                .font(.system(size: 24, weight: .medium))
-                .foregroundColor(.white)
+            MarkdownView(text: card.front ?? "")
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             if let tags = card.tags {
@@ -225,9 +250,7 @@ struct CardView: View {
     
     private var backView: some View {
         VStack(alignment: .leading, spacing: 24) {
-            Text(card.back ?? "")
-                .font(.system(size: 20, weight: .regular))
-                .foregroundColor(.white)
+            MarkdownView(text: card.back ?? "")
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             Spacer()
@@ -258,23 +281,45 @@ struct CardView: View {
 
 struct RatingButton: View {
     let rating: ReviewRating
-    
-    private var color: Color {
-        switch rating {
-        case .again: return Color.hex("FF453A")
-        case .good: return Color.hex("30D158")
-        case .easy: return Color.hex("0A84FF")
-        }
-    }
+    @State private var showingFeedback = false
+    @State private var scale: CGFloat = 1.0
     
     var body: some View {
-        Text(rating.rawValue)
-            .font(.system(size: 17, weight: .semibold))
-            .foregroundColor(.white)
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                Image(systemName: rating.icon)
+                    .font(.system(size: 20))
+                    .foregroundColor(.white)
+                
+                Text(rating.rawValue)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.white)
+            }
             .frame(maxWidth: .infinity)
             .frame(height: 56)
-            .background(color)
+            .background(rating.color)
             .cornerRadius(12)
+            .scaleEffect(scale)
+            
+            if showingFeedback {
+                Text(rating.feedback)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(rating.color)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .onTapGesture {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                scale = 1.1
+                showingFeedback.toggle()
+            }
+            
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6).delay(0.1)) {
+                scale = 1.0
+            }
+        }
     }
 }
 

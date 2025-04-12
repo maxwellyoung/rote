@@ -60,7 +60,6 @@ class PersistenceController {
     init(inMemory: Bool = false) {
         container = NSPersistentContainer(name: "rote")
         
-        // Configure the persistent store
         if inMemory {
             container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
         } else {
@@ -76,50 +75,49 @@ class PersistenceController {
             
             // Configure the persistent store
             let description = NSPersistentStoreDescription(url: storeURL)
+            
+            // Enable automatic saving
             description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
             description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+            
+            // Basic store configuration first
             container.persistentStoreDescriptions = [description]
         }
-        
-        // Load the persistent stores
-        container.loadPersistentStores { (storeDescription, error) in
+
+        // Load the persistent store
+        container.loadPersistentStores { storeDescription, error in
             if let error = error as NSError? {
-                // Log the error details
-                print("Error loading persistent store: \(error), \(error.userInfo)")
-                
-                // Handle common errors
+                // Handle common Core Data errors
                 switch error.code {
                 case NSPersistentStoreIncompatibleVersionHashError:
                     // Handle model version mismatch
-                    print("⚠️ Incompatible model version. Migration needed.")
+                    print("⚠️ Core Data model version mismatch. Attempting recovery...")
+                    try? FileManager.default.removeItem(at: storeDescription.url!)
+                    fatalError("Core Data store had to be recreated due to model mismatch")
+                    
                 case NSMigrationMissingSourceModelError:
                     // Handle missing model
-                    print("⚠️ Missing source model.")
+                    print("⚠️ Core Data source model not found")
+                    try? FileManager.default.removeItem(at: storeDescription.url!)
+                    fatalError("Core Data source model is missing")
+                    
                 default:
-                    print("⚠️ Unhandled error: \(error.localizedDescription)")
+                    print("⚠️ Unresolved Core Data error: \(error), \(error.userInfo)")
+                    try? FileManager.default.removeItem(at: storeDescription.url!)
+                    fatalError("Unresolved Core Data error: \(error)")
                 }
-                
-                // In development, we might want to delete the store and start fresh
-                #if DEBUG
-                try? FileManager.default.removeItem(at: storeDescription.url!)
-                fatalError("Unresolved Core Data error: \(error)")
-                #else
-                // In production, we should handle this more gracefully
-                print("⚠️ Core Data store error. The app will continue with an empty store.")
-                #endif
             }
         }
-        
+
         // Configure the view context
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
         
-        // Set up automatic saving
-        #if os(iOS)
-        NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.save()
+        // Only set up iCloud sync after basic store is working
+        if !inMemory {
+            let cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.com.yourdomain.rote")
+            container.persistentStoreDescriptions.first?.cloudKitContainerOptions = cloudKitContainerOptions
         }
-        #endif
     }
     
     // Helper function to save changes

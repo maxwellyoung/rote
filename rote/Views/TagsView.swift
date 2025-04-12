@@ -8,6 +8,9 @@ struct TagsView: View {
         animation: .default)
     private var cards: FetchedResults<Card>
     
+    @State private var searchText = ""
+    @State private var selectedTag: String?
+    
     private var tagGroups: [String: [Card]] {
         var groups: [String: [Card]] = [:]
         for card in cards {
@@ -21,6 +24,14 @@ struct TagsView: View {
         return groups
     }
     
+    private var filteredTags: [String] {
+        let tags = Array(tagGroups.keys).sorted()
+        if searchText.isEmpty {
+            return tags
+        }
+        return tags.filter { $0.localizedCaseInsensitiveContains(searchText) }
+    }
+    
     var body: some View {
         NavigationView {
             ZStack {
@@ -32,37 +43,52 @@ struct TagsView: View {
                 )
                 .edgesIgnoringSafeArea(.all)
                 
-                if tagGroups.isEmpty {
-                    SharedEmptyStateView(
-                        systemImage: "tag.circle.fill",
-                        title: "No tags yet",
-                        message: "Add tags to your cards to organize them",
-                        tintColor: Color.hex("5E5CE6")
-                    )
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            ForEach(Array(tagGroups.keys).sorted(), id: \.self) { tag in
-                                NavigationLink(destination: TagDetailView(tag: tag, cards: tagGroups[tag] ?? [])) {
-                                    TagRowView(tag: tag, count: tagGroups[tag]?.count ?? 0)
-                                }
+                VStack(spacing: 0) {
+                    // Search bar
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(Color.hex("8E8E93"))
+                        
+                        TextField("Search tags...", text: $searchText)
+                            .foregroundColor(.white)
+                            .autocapitalization(.none)
+                        
+                        if !searchText.isEmpty {
+                            Button(action: { searchText = "" }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(Color.hex("8E8E93"))
                             }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
+                    }
+                    .padding(12)
+                    .background(Color.hex("1C1C1E"))
+                    .cornerRadius(10)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    
+                    if filteredTags.isEmpty {
+                        SharedEmptyStateView(
+                            systemImage: "tag.circle.fill",
+                            title: "No tags found",
+                            message: searchText.isEmpty ? "Add tags to your cards to organize them" : "Try a different search term",
+                            tintColor: Color.hex("5E5CE6")
+                        )
+                    } else {
+                        ScrollView {
+                            LazyVStack(spacing: 12) {
+                                ForEach(filteredTags, id: \.self) { tag in
+                                    NavigationLink(destination: TagDetailView(tag: tag, cards: tagGroups[tag] ?? [])) {
+                                        TagRowView(tag: tag, count: tagGroups[tag]?.count ?? 0)
+                                    }
+                                }
+                            }
+                            .padding(16)
+                        }
                     }
                 }
             }
             .navigationTitle("Tags")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {}) {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundColor(Color.hex("5E5CE6"))
-                    }
-                }
-            }
         }
     }
 }
