@@ -1,6 +1,28 @@
 import SwiftUI
 
 // MARK: - Shared Components
+struct TagChip: View {
+    let tag: String
+    let onDelete: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(tag)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(Color.hex("5E5CE6"))
+            
+            Button(action: onDelete) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(Color.hex("5E5CE6"))
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.hex("5E5CE6").opacity(0.1))
+        .cornerRadius(8)
+    }
+}
+
 struct SharedEmptyStateView: View {
     let systemImage: String
     let title: String
@@ -11,7 +33,7 @@ struct SharedEmptyStateView: View {
         systemImage: String = "checkmark.circle.fill",
         title: String = "All caught up!",
         message: String = "Come back later for more cards",
-        tintColor: Color = .accentColor
+        tintColor: Color = Color.hex("34C759")
     ) {
         self.systemImage = systemImage
         self.title = title
@@ -32,7 +54,7 @@ struct SharedEmptyStateView: View {
                 
                 Text(message)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(Color.Theme.secondaryText)
+                    .foregroundColor(Color.hex("8E8E93"))
                     .multilineTextAlignment(.center)
             }
         }
@@ -40,38 +62,11 @@ struct SharedEmptyStateView: View {
     }
 }
 
-// MARK: - Extensions
+// MARK: - View Extensions
+
+
+// MARK: - Color Extensions
 extension Color {
-    enum Theme {
-        // Background colors
-        static let background = Color.hex("111111")
-        static let secondaryBackground = Color.hex("1C1C1E")
-        static let tertiaryBackground = Color.hex("2C2C2E")
-        
-        // Text colors
-        static let primaryText = Color.white
-        static let secondaryText = Color.hex("8E8E93")
-        
-        // Accent colors
-        static let accent = Color.hex("7C7AE6")  // More muted purple
-        static let success = Color.hex("4EA67A")  // Muted green
-        static let warning = Color.hex("B5873D")  // Muted orange
-        static let error = Color.hex("B55B5B")    // Muted red
-        
-        // Card colors
-        static let cardBackground = Color.hex("1C1C1E")
-        static let cardBorder = Color.hex("2C2C2E")
-        
-        // Rating colors
-        static let againRating = Color.hex("B55B5B")  // Muted red
-        static let goodRating = Color.hex("4EA67A")   // Muted green
-        static let easyRating = Color.hex("5B8AB5")   // Muted blue
-        
-        // Tag colors
-        static let tagBackground = Color.hex("7C7AE6").opacity(0.15)
-        static let tagText = Color.hex("7C7AE6")
-    }
-    
     static func hex(_ hex: String) -> Color {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0

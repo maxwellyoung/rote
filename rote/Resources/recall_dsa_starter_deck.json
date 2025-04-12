@@ -1,0 +1,282 @@
+{
+  "name": "DSA Fundamentals: Ultra Expanded",
+  "description": "An exhaustive guide to Data Structures and Algorithms, covering everything from asymptotic analysis to NP-completeness. This deck deconstructs foundational topics and advanced paradigms alike, urging a critical look at hidden costs, design trade-offs and the subtleties of implementation. Ideal for practitioners and theorists who want depth, nuance and rigour in every byte.",
+  "cards": [
+    {
+      "id": "dsa-001",
+      "front": "What is Big O notation and how does it relate to Big Θ and Big Ω in algorithm analysis?",
+      "back": "Big O defines an upper bound on algorithm performance, capturing the worst-case scenario. In contrast, Big Θ provides a tight bound that characterises average performance, and Big Ω sets a lower bound for best-case scenarios. These notations let us compare and evaluate algorithms, especially when scaling with input size. Eg: O(n) implies linear growth, but real-world performance may also depend on constant factors and lower-order terms.",
+      "type": "Concept",
+      "tags": ["complexity", "analysis", "asymptotics"],
+      "topic": "Algorithm Analysis"
+    },
+    {
+      "id": "dsa-002",
+      "front": "Compare Arrays vs. Linked Lists in terms of memory, access and update operations.",
+      "back": "Arrays reserve contiguous memory space, allowing constant-time O(1) indexed access but often suffer O(n) insertion/deletion costs due to element shifts. Linked lists feature nodes scattered across memory, connected by pointers—offering O(1) insertion/deletion given a reference, but O(n) access since traversal is necessary. Arrays may be fixed in size (unless using dynamic variants), while linked lists allow dynamic resizing at the cost of extra memory for pointers.",
+      "type": "Concept",
+      "tags": ["data-structures", "arrays", "linked-lists"],
+      "topic": "Data Structures"
+    },
+    {
+      "id": "dsa-003",
+      "front": "How do hash tables work and how are collisions handled?",
+      "back": "Hash tables map keys to indices via a hash function. Collisions, when distinct keys hash to the same index, are managed using methods like separate chaining (linked lists or similar structures within buckets) or open addressing (probing for the next free slot). Proper load factor management and rehashing ensure that the average-case complexity for lookup, insertion and deletion remains around O(1).",
+      "type": "Concept",
+      "tags": ["data-structures", "hash-tables", "collision-resolution"],
+      "topic": "Data Structures"
+    },
+    {
+      "id": "dsa-004",
+      "front": "Explain Binary Search, detailing its mechanics and its time/space complexities.",
+      "back": "Binary Search is a divide-and-conquer strategy that finds a target value within a sorted array by repeatedly halving the search interval. With each comparison against the middle element, half the elements are eliminated. It typically runs in O(log n) time with O(1) space in the iterative version, though a recursive implementation may incur additional stack space.",
+      "type": "Algorithm",
+      "tags": ["algorithms", "searching", "divide-and-conquer"],
+      "topic": "Searching"
+    },
+    {
+      "id": "dsa-005",
+      "front": "What is recursion, when should you use it, and what pitfalls does it introduce?",
+      "back": "Recursion occurs when a function calls itself to break down a complex problem into simpler subproblems. It's elegant for naturally recursive structures like trees or for divide-and-conquer techniques (e.g. QuickSort, MergeSort). However, it carries risks—like stack overflow and hidden performance costs if not tail-call optimised. Often, iterative solutions might be more efficient when resource constraints are tight.",
+      "type": "Concept",
+      "tags": ["recursion", "programming", "pitfalls"],
+      "topic": "Programming Concepts"
+    },
+    {
+      "id": "dsa-006",
+      "front": "Overview of common sorting algorithms and their trade-offs.",
+      "back": "Sorting methods such as Bubble Sort and Insertion Sort are easy to implement but run in O(n²) worst-case—suited for small or nearly sorted datasets. Algorithms like Merge Sort and QuickSort average O(n log n) time. Merge Sort is stable and predictable but requires extra memory, while QuickSort is in-place but can degrade to O(n²) without careful pivot selection. Each algorithm’s suitability depends on factors like dataset size, stability needs and memory constraints.",
+      "type": "Algorithm",
+      "tags": ["algorithms", "sorting", "performance"],
+      "topic": "Sorting"
+    },
+    {
+      "id": "dsa-007",
+      "front": "Differentiate between Stacks and Queues and provide practical use cases.",
+      "back": "Stacks follow a Last-In-First-Out (LIFO) order, making them perfect for tasks like maintaining function call history or undo operations. Queues enforce First-In-First-Out (FIFO) order, which is ideal for task scheduling and breadth-first search (BFS). Their implementations—via arrays or linked lists—highlight trade-offs between access speed and memory overhead.",
+      "type": "Concept",
+      "tags": ["data-structures", "stacks", "queues"],
+      "topic": "Data Structures"
+    },
+    {
+      "id": "dsa-008",
+      "front": "Explain trees and the significance of balanced trees (BST, AVL, Red-Black).",
+      "back": "Trees are hierarchical structures comprising nodes. A Binary Search Tree (BST) allows fast lookup when balanced, but can degrade to O(n) in the worst-case (skewed tree). Balanced trees such as AVL or Red-Black trees maintain height restrictions to ensure O(log n) search, insertion and deletion operations. Their design is critical in applications like databases, where predictable performance is vital.",
+      "type": "Concept",
+      "tags": ["data-structures", "trees", "balanced-trees"],
+      "topic": "Data Structures"
+    },
+    {
+      "id": "dsa-009",
+      "front": "Outline common graph representations and traversal methods.",
+      "back": "Graphs can be represented via adjacency matrices (constant-time edge lookup but inefficient for sparse graphs) or adjacency lists (more space-efficient for sparse graphs but slower edge checks). Traversal techniques include Depth-First Search (DFS) for exploring deep paths and detecting cycles, and Breadth-First Search (BFS) for shortest-path finding in unweighted graphs. Choice of representation impacts algorithm design and performance.",
+      "type": "Algorithm",
+      "tags": ["graphs", "traversal", "data-structures"],
+      "topic": "Graphs"
+    },
+    {
+      "id": "dsa-010",
+      "front": "What are the core principles of Dynamic Programming and its typical use cases?",
+      "back": "Dynamic Programming (DP) tackles problems by breaking them down into overlapping subproblems and storing interim results. It's ideal for optimisation challenges like the knapsack problem, sequence alignment, or computing Fibonacci numbers. DP relies on recognising optimal substructure and can be implemented recursively (with memoisation) or iteratively (tabulation), each bringing its own performance and space trade-offs.",
+      "type": "Concept",
+      "tags": ["dynamic-programming", "optimisation", "memoisation"],
+      "topic": "Advanced Algorithms"
+    },
+    {
+      "id": "dsa-011",
+      "front": "How do Greedy algorithms differ from Dynamic Programming, and when is each suitable?",
+      "back": "Greedy algorithms choose the locally optimal option at each step, which can yield a globally optimal solution if the problem exhibits the greedy-choice property (eg, Huffman coding, activity selection). In contrast, Dynamic Programming systematically explores overlapping subproblems, ensuring optimality at the expense of additional computational resources. The key is recognising structural properties that suit a greedy approach versus requiring exhaustive exploration.",
+      "type": "Concept",
+      "tags": ["greedy", "dynamic-programming", "algorithm-design"],
+      "topic": "Advanced Algorithms"
+    },
+    {
+      "id": "dsa-012",
+      "front": "How should one approach complexity analysis beyond asymptotic notation?",
+      "back": "Beyond Big O, a holistic complexity analysis considers constant factors, lower-order terms, cache behaviour, and parallelisation overhead. Real-world performance often deviates from theoretical models due to hardware constraints and architectural nuances. Profiling, benchmarking and recognising amortised costs are critical steps in bridging theory with practical system design.",
+      "type": "Concept",
+      "tags": ["complexity", "performance", "analysis"],
+      "topic": "Algorithm Analysis"
+    },
+    {
+      "id": "dsa-013",
+      "front": "Differentiate worst-case, average-case, and best-case complexity with examples.",
+      "back": "Worst-case complexity evaluates the maximum time an algorithm will take, ensuring reliability under all conditions. Average-case considers typical inputs (though harder to compute), while best-case is rarely practical but can provide insights into algorithm behaviour under ideal conditions. For instance, QuickSort’s worst-case is O(n²) but averages O(n log n) when pivots are well-chosen.",
+      "type": "Concept",
+      "tags": ["complexity", "analysis", "performance"],
+      "topic": "Algorithm Analysis"
+    },
+    {
+      "id": "dsa-014",
+      "front": "What is the Master Theorem and how does it help solve recurrences?",
+      "back": "The Master Theorem provides a shortcut to solving recurrences common in divide-and-conquer algorithms. By analysing the recurrence in the form T(n) = aT(n/b) + f(n), it offers asymptotic bounds based on the relative growth of f(n) and n^(log_b(a)). This theorem streamlines complexity analysis for algorithms like Merge Sort and many others.",
+      "type": "Concept",
+      "tags": ["recurrence", "divide-and-conquer", "analysis"],
+      "topic": "Algorithm Analysis"
+    },
+    {
+      "id": "dsa-015",
+      "front": "How do you solve recurrence relations and why are they important?",
+      "back": "Recurrence relations express the overall cost of an algorithm as a function of its subproblem costs. Techniques like substitution, iteration, or the recursion-tree method help solve them to obtain asymptotic bounds. This is essential for analysing the performance of recursive and divide-and-conquer algorithms, and for understanding the impact of algorithmic design choices.",
+      "type": "Concept",
+      "tags": ["recurrence", "analysis", "algorithms"],
+      "topic": "Algorithm Analysis"
+    },
+    {
+      "id": "dsa-016",
+      "front": "Compare Depth-First Search (DFS) and Breadth-First Search (BFS) in graphs.",
+      "back": "DFS explores as far down a branch as possible before backtracking, making it useful for cycle detection and topological sorting. BFS explores all neighbours level by level, which is ideal for finding the shortest path in unweighted graphs. Their implementation differences—recursive/stack-based vs. iterative/queue-based—lead to distinct space and time characteristics.",
+      "type": "Algorithm",
+      "tags": ["graphs", "DFS", "BFS"],
+      "topic": "Graphs"
+    },
+    {
+      "id": "dsa-017",
+      "front": "Outline the differences and use-cases for Kruskal's and Prim's algorithms in MST.",
+      "back": "Both Kruskal's and Prim's algorithms construct a Minimum Spanning Tree (MST) for a connected weighted graph. Kruskal's algorithm sorts all edges and adds the smallest edge that doesn’t form a cycle, making it suitable for sparse graphs. Prim’s algorithm grows the MST from a starting vertex, often using a priority queue, and can be more efficient on dense graphs. Each highlights different trade-offs in implementation complexity and performance.",
+      "type": "Algorithm",
+      "tags": ["graphs", "MST", "greedy"],
+      "topic": "Graphs"
+    },
+    {
+      "id": "dsa-018",
+      "front": "Explain Dijkstra's algorithm for shortest paths and its limitations.",
+      "back": "Dijkstra's algorithm finds the shortest path from a source to all other vertices in a graph with non-negative edge weights. It utilises a priority queue to greedily select the closest unvisited vertex. However, it cannot handle negative weight edges, for which alternatives like the Bellman-Ford algorithm are necessary. Its efficiency and simplicity make it a staple in routing and navigation systems.",
+      "type": "Algorithm",
+      "tags": ["graphs", "shortest-path", "Dijkstra"],
+      "topic": "Graphs"
+    },
+    {
+      "id": "dsa-019",
+      "front": "How does the Bellman-Ford algorithm handle negative weights?",
+      "back": "Bellman-Ford relaxes edges repeatedly to compute shortest paths even in the presence of negative edge weights, though it runs in O(VE) time. It can also detect negative cycles, alerting to potential issues in cost metrics. This makes it invaluable in contexts where edge weights may dip below zero, despite its slower performance compared to Dijkstra's algorithm for non-negative graphs.",
+      "type": "Algorithm",
+      "tags": ["graphs", "shortest-path", "Bellman-Ford"],
+      "topic": "Graphs"
+    },
+    {
+      "id": "dsa-020",
+      "front": "Describe the Floyd-Warshall algorithm and its role in solving all-pairs shortest paths.",
+      "back": "The Floyd-Warshall algorithm computes shortest paths between all pairs of vertices in a weighted graph (including those with negative weights but no negative cycles) using dynamic programming. With a cubic time complexity of O(n³), it's best applied to smaller graphs or dense networks where comprehensive shortest path data is required.",
+      "type": "Algorithm",
+      "tags": ["graphs", "shortest-path", "dynamic-programming"],
+      "topic": "Graphs"
+    },
+    {
+      "id": "dsa-021",
+      "front": "What are non-comparison-based sorts like Counting Sort, Radix Sort and Bucket Sort?",
+      "back": "Non-comparison-based sorting algorithms bypass the O(n log n) lower bound of comparison sorts by leveraging properties of the input. Counting Sort tallies frequencies for direct placement, Radix Sort processes digits or bits iteratively, and Bucket Sort distributes elements into buckets before sorting within them. They can achieve linear time performance under appropriate conditions, though with trade-offs in space and stability.",
+      "type": "Algorithm",
+      "tags": ["sorting", "non-comparison", "performance"],
+      "topic": "Sorting"
+    },
+    {
+      "id": "dsa-022",
+      "front": "What is backtracking, and how does it apply to problems like the N-Queens puzzle?",
+      "back": "Backtracking is a recursive, brute-force technique that incrementally builds solutions and abandons those that fail to satisfy constraints. In the N-Queens puzzle, it places queens row by row while rejecting placements that lead to conflicts. While conceptually simple, backtracking can be computationally expensive and may require optimisations to prune redundant paths.",
+      "type": "Algorithm",
+      "tags": ["backtracking", "recursion", "NP-hard"],
+      "topic": "Advanced Algorithms"
+    },
+    {
+      "id": "dsa-023",
+      "front": "Define amortised analysis and why it’s crucial in understanding dynamic data structures.",
+      "back": "Amortised analysis averages the worst-case cost of operations over a sequence, revealing that occasional expensive operations may be offset by many inexpensive ones. This is particularly relevant for dynamic arrays or union-find structures, where an occasional resizing or tree restructuring doesn’t ruin overall performance. It offers a more realistic measure of an algorithm’s efficiency in practice.",
+      "type": "Concept",
+      "tags": ["analysis", "amortised", "data-structures"],
+      "topic": "Algorithm Analysis"
+    },
+    {
+      "id": "dsa-024",
+      "front": "What are Tries, and how do they excel in handling string data?",
+      "back": "Tries, or prefix trees, store strings in a tree where each node represents a character. This enables rapid retrieval and insertion, particularly for tasks like autocomplete or spell-check, by utilising common prefixes. While memory-intensive compared to hash tables, tries offer ordered data and efficient prefix queries, making them invaluable in text processing.",
+      "type": "Concept",
+      "tags": ["data-structures", "tries", "strings"],
+      "topic": "Data Structures"
+    },
+    {
+      "id": "dsa-025",
+      "front": "Contrast Suffix Trees and Suffix Arrays for string matching applications.",
+      "back": "Suffix Trees and Suffix Arrays are specialised data structures for efficient substring queries. Suffix Trees offer fast query times but at a high memory cost, while Suffix Arrays are more space-efficient yet may require additional structures like LCP arrays for similar performance. Their trade-offs are critical in fields like bioinformatics and text indexing.",
+      "type": "Concept",
+      "tags": ["data-structures", "strings", "suffix-trees"],
+      "topic": "Data Structures"
+    },
+    {
+      "id": "dsa-026",
+      "front": "Explain the Union-Find (Disjoint Set) data structure and its typical operations.",
+      "back": "Union-Find structures manage disjoint sets efficiently, supporting operations like 'find' (to determine set membership) and 'union' (to merge sets). With optimisations like path compression and union-by-rank, these operations amortise to near-constant time. They are vital in network connectivity, clustering and cycle detection in graphs.",
+      "type": "Concept",
+      "tags": ["data-structures", "union-find", "amortised"],
+      "topic": "Data Structures"
+    },
+    {
+      "id": "dsa-027",
+      "front": "What are B-Trees, and why are they ideal for database and filesystem implementations?",
+      "back": "B-Trees are balanced tree structures designed to minimise disk reads by maximising data stored in each node. Their multi-way branching supports efficient search, insertion and deletion. These properties make B-Trees ubiquitous in databases and filesystems, where block-oriented storage requires minimising I/O operations and ensuring consistency even with massive datasets.",
+      "type": "Concept",
+      "tags": ["data-structures", "B-Trees", "databases"],
+      "topic": "Data Structures"
+    },
+    {
+      "id": "dsa-028",
+      "front": "Discuss dynamic programming space optimisation techniques.",
+      "back": "Space optimisation in DP involves techniques such as using rolling arrays or iterative tabulation to reduce memory usage. By recognising that only a subset of previously computed states is necessary at any step, one can often compress a 2D table into a 1D array. This is essential in resource-constrained environments while preserving the integrity of the optimisation logic.",
+      "type": "Concept",
+      "tags": ["dynamic-programming", "optimisation", "space"],
+      "topic": "Advanced Algorithms"
+    },
+    {
+      "id": "dsa-029",
+      "front": "Describe the differences between Inorder, Preorder, Postorder and Level Order tree traversals.",
+      "back": "Tree traversals dictate the order in which nodes are processed. Inorder (left, root, right) produces sorted output for BSTs, Preorder (root, left, right) is useful for tree copying, and Postorder (left, right, root) is ideal for deletion processes. Level Order traverses the tree by levels using a queue. Each method has distinct applications depending on the desired data extraction pattern.",
+      "type": "Concept",
+      "tags": ["trees", "traversal", "algorithms"],
+      "topic": "Data Structures"
+    },
+    {
+      "id": "dsa-030",
+      "front": "Compare memoisation and tabulation in dynamic programming.",
+      "back": "Memoisation stores results of expensive recursive calls, avoiding redundant computations via caching, while tabulation builds a solution iteratively from the base up. Memoisation is often easier to implement but may suffer from recursion overhead; tabulation typically runs in a loop structure with predictable memory access patterns. Choosing between them depends on problem structure and language constraints.",
+      "type": "Concept",
+      "tags": ["dynamic-programming", "memoisation", "tabulation"],
+      "topic": "Advanced Algorithms"
+    },
+    {
+      "id": "dsa-031",
+      "front": "How do you differentiate between sparse and dense graph representations?",
+      "back": "Sparse graphs, with relatively few edges, are best represented using adjacency lists, which conserve space and allow efficient iteration over neighbours. Dense graphs, where edge count is high, may benefit from adjacency matrices that allow constant-time edge lookups. The choice depends on graph size, edge density and the typical operations—each representation imposes its own trade-offs in time and space.",
+      "type": "Concept",
+      "tags": ["graphs", "representation", "data-structures"],
+      "topic": "Graphs"
+    },
+    {
+      "id": "dsa-032",
+      "front": "What is the divide and conquer paradigm and what are some advanced examples?",
+      "back": "Divide and conquer splits a problem into independent subproblems, solves them recursively, and then merges the results. Classic examples include Merge Sort and QuickSort; more advanced applications include Strassen's algorithm for matrix multiplication, which reduces computational complexity by recursively decomposing matrices. This paradigm emphasises reducing a complex problem into simpler chunks that are easier to solve.",
+      "type": "Concept",
+      "tags": ["divide-and-conquer", "algorithms", "advanced"],
+      "topic": "Algorithm Design"
+    },
+    {
+      "id": "dsa-033",
+      "front": "Outline advanced heap structures and their use-cases.",
+      "back": "Beyond binary heaps, data structures like binomial heaps and Fibonacci heaps offer improved amortised time bounds for operations such as decrease-key. These structures are integral in algorithms like Dijkstra's (with Fibonacci heaps) where fast priority updates improve overall performance. Their complexity, however, can make implementation and maintenance challenging.",
+      "type": "Concept",
+      "tags": ["data-structures", "heaps", "advanced"],
+      "topic": "Data Structures"
+    },
+    {
+      "id": "dsa-034",
+      "front": "Compare greedy algorithms with brute-force approaches in terms of trade-offs.",
+      "back": "Greedy algorithms prioritise local optimality, often resulting in simpler and faster solutions when the problem structure guarantees global optimality. However, brute-force methods—though exhaustive—ensure correctness by checking every possibility, making them impractical for large inputs. The trade-off is between speed and certainty, with greedy methods excelling when problem properties, like the greedy-choice property, hold true.",
+      "type": "Concept",
+      "tags": ["greedy", "brute-force", "algorithm-design"],
+      "topic": "Advanced Algorithms"
+    },
+    {
+      "id": "dsa-035",
+      "front": "Provide an overview of complexity classes and the significance of NP-completeness.",
+      "back": "Complexity classes like P and NP categorise problems based on the computational effort required for solving and verifying solutions. NP-complete problems, which are as hard as any in NP, signal that a polynomial-time solution for one would solve all NP problems efficiently. This framework is central to theoretical computer science, impacting algorithm design, cryptography, and our understanding of computational limitations.",
+      "type": "Concept",
+      "tags": ["complexity", "NP-complete", "the
