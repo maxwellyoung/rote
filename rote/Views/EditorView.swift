@@ -248,7 +248,7 @@ struct EditorCardView: View {
             }
             
             if showPreview {
-                MarkdownView(text: text)
+                MarkdownText(text: text)
                     .padding(16)
                     .background(Color.hex("1C1C1E"))
                     .cornerRadius(12)

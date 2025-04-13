@@ -27,7 +27,7 @@ extension NSManagedObject {
             
             // Add module information
             if let className = NSClassFromString(entity.managedObjectClassName) {
-                print("   Module: \(className.self)")
+                print("   Module: \(String(describing: className))")
             } else {
                 print("   ❌ Class not found in runtime")
             }
@@ -82,5 +82,11 @@ extension Review {
         default:
             return .gray
         }
+    }
+}
+
+extension Card {
+    public override var description: String {
+        "Card(id: \(id?.uuidString ?? "nil"), front: \(front ?? "nil"), back: \(back ?? "nil"), tags: \(tags), createdAt: \(createdAt?.description ?? "nil"), modifiedAt: \(modifiedAt?.description ?? "nil"), lastReviewDate: \(lastReviewDate?.description ?? "nil"), dueDate: \(dueDate?.description ?? "nil"), reviewCount: \(reviewCount), ease: \(ease), interval: \(interval), streak: \(streak), reviewHistory: \(reviewHistory ?? "nil"), deck: \(deck?.id?.uuidString ?? "nil"))"
     }
 } 

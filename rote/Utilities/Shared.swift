@@ -1,24 +1,52 @@
 import SwiftUI
 
+// MARK: - Accent Colors
+enum AccentColor: String, CaseIterable {
+    case blue = "5E5CE6"
+    case green = "34C759"
+    case orange = "FF9500"
+    case pink = "FF2D55"
+    case purple = "AF52DE"
+    case red = "FF3B30"
+    case yellow = "FFCC00"
+    
+    var name: String {
+        switch self {
+        case .blue: return "Blue"
+        case .green: return "Green"
+        case .orange: return "Orange"
+        case .pink: return "Pink"
+        case .purple: return "Purple"
+        case .red: return "Red"
+        case .yellow: return "Yellow"
+        }
+    }
+    
+    var color: Color {
+        Color.hex(self.rawValue)
+    }
+}
+
 // MARK: - Shared Components
 struct TagChip: View {
     let tag: String
     let onDelete: () -> Void
+    @AppStorage("accentColor") private var accentColor = "5E5CE6"
     
     var body: some View {
         HStack(spacing: 8) {
             Text(tag)
                 .font(.system(size: 15, weight: .medium))
-                .foregroundColor(Color.hex("5E5CE6"))
+                .foregroundColor(Color.hex(accentColor))
             
             Button(action: onDelete) {
                 Image(systemName: "xmark.circle.fill")
-                    .foregroundColor(Color.hex("5E5CE6"))
+                    .foregroundColor(Color.hex(accentColor))
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color.hex("5E5CE6").opacity(0.1))
+        .background(Color.hex(accentColor).opacity(0.1))
         .cornerRadius(8)
     }
 }

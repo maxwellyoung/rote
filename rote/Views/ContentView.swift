@@ -2,30 +2,44 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(\.colorScheme) var colorScheme
+    @AppStorage("accentColor") private var accentColor = "5E5CE6"
+    @AppStorage("useCustomAccentColor") private var useCustomAccentColor = false
+    @State private var selectedTab = Tab.study
+    
+    private enum Tab {
+        case study
+        case decks
+        case analytics
+        case tags
+    }
     
     var body: some View {
-        TabView {
-            ReviewView()
+        TabView(selection: $selectedTab) {
+            StudyView()
                 .tabItem {
-                    Label("Review", systemImage: "brain")
+                    Label("Study", systemImage: "brain.fill")
                 }
+                .tag(Tab.study)
+            
+            DeckListView()
+                .tabItem {
+                    Label("Decks", systemImage: "square.stack.fill")
+                }
+                .tag(Tab.decks)
+            
+            AnalyticsView()
+                .tabItem {
+                    Label("Analytics", systemImage: "chart.line.uptrend.xyaxis")
+                }
+                .tag(Tab.analytics)
             
             TagsView()
                 .tabItem {
-                    Label("Tags", systemImage: "tag")
+                    Label("Tags", systemImage: "tag.fill")
                 }
-            
-            StatsView()
-                .tabItem {
-                    Label("Stats", systemImage: "chart.bar")
-                }
-            
-            SettingsView()
-                .tabItem {
-                    Label("Settings", systemImage: "gear")
-                }
+                .tag(Tab.tags)
         }
-        .tint(Color.hex("5E5CE6"))
+        .tint(Color.hex(accentColor))
     }
 }
 

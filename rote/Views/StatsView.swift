@@ -9,6 +9,7 @@ struct StatsView: View {
     private var cards: FetchedResults<Card>
     
     @State private var selectedRange: TimeRange = .week
+    @AppStorage("accentColor") private var accentColor = "5E5CE6"
     
     private var stats: Statistics {
         calculateStats(for: selectedRange)
@@ -17,7 +18,6 @@ struct StatsView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Background gradient
                 LinearGradient(
                     gradient: Gradient(colors: [Color.hex("1A1A1A"), Color.hex("0A0A0A")]),
                     startPoint: .top,
@@ -25,67 +25,72 @@ struct StatsView: View {
                 )
                 .edgesIgnoringSafeArea(.all)
                 
-                VStack(spacing: 24) {
-                    // Today's stats
-                    VStack(spacing: 16) {
-                        HStack {
-                            Text("Today")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(Color.hex("8E8E93"))
-                            Spacer()
-                        }
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Time range picker
+                        TimeRangePicker(selectedRange: $selectedRange)
+                            .padding(.horizontal)
                         
-                        Text("12")
-                            .font(.system(size: 48, weight: .medium))
-                            .foregroundColor(.white)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(24)
-                    .background(Color.hex("1C1C1E"))
-                    .cornerRadius(16)
-                    
-                    // Weekly stats
-                    VStack(spacing: 16) {
-                        HStack {
-                            Text("Last 7 Days")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(Color.hex("8E8E93"))
-                            Spacer()
+                        // Stats overview
+                        HStack(spacing: 16) {
+                            AnalyticsStatBox(
+                                title: "Reviews",
+                                value: "\(stats.totalReviews)",
+                                icon: "chart.bar.fill",
+                                color: Color.hex(accentColor)
+                            )
+                            
+                            AnalyticsStatBox(
+                                title: "Retention",
+                                value: "\(Int(stats.retentionRate * 100))%",
+                                icon: "brain.fill",
+                                color: Color.green
+                            )
                         }
+                        .padding(.horizontal)
                         
-                        Text("84")
-                            .font(.system(size: 48, weight: .medium))
-                            .foregroundColor(.white)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(24)
-                    .background(Color.hex("1C1C1E"))
-                    .cornerRadius(16)
-                    
-                    // Monthly stats
-                    VStack(spacing: 16) {
-                        HStack {
-                            Text("Last 30 Days")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(Color.hex("8E8E93"))
-                            Spacer()
+                        // Progress graph
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Progress")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.white)
+                            
+                            ReviewGraph(data: stats.dailyReviews)
+                                .frame(height: 200)
                         }
+                        .padding()
+                        .background(Color.hex("1C1C1E"))
+                        .cornerRadius(16)
+                        .padding(.horizontal)
                         
-                        Text("342")
-                            .font(.system(size: 48, weight: .medium))
-                            .foregroundColor(.white)
+                        // Tag distribution
+                        if !stats.tagCounts.isEmpty {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Tags")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundColor(.white)
+                                
+                                ForEach(Array(stats.tagCounts.sorted { $0.value > $1.value }), id: \.key) { tag, count in
+                                    HStack {
+                                        Text(tag)
+                                            .foregroundColor(.white)
+                                        Spacer()
+                                        Text("\(count)")
+                                            .foregroundColor(Color.hex("8E8E93"))
+                                    }
+                                    .font(.system(size: 15))
+                                }
+                            }
+                            .padding()
+                            .background(Color.hex("1C1C1E"))
+                            .cornerRadius(16)
+                            .padding(.horizontal)
+                        }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(24)
-                    .background(Color.hex("1C1C1E"))
-                    .cornerRadius(16)
-                    
-                    Spacer()
+                    .padding(.vertical)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
             }
-            .navigationTitle("Stats")
+            .navigationTitle("Analytics")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
@@ -93,37 +98,61 @@ struct StatsView: View {
     private func calculateStats(for range: TimeRange) -> Statistics {
         let now = Date()
         let calendar = Calendar.current
-        let startDate: Date
+        let startDate = calendar.date(byAdding: .day, value: -range.days, to: now) ?? now
         
-        switch range {
-        case .week:
-            startDate = calendar.date(byAdding: .day, value: -7, to: now)!
-        case .month:
-            startDate = calendar.date(byAdding: .month, value: -1, to: now)!
-        case .year:
-            startDate = calendar.date(byAdding: .year, value: -1, to: now)!
+        let reviews = cards.flatMap { card in
+            card.reviews?.allObjects as? [Review] ?? []
         }
         
+        let filteredReviews = reviews.filter { review in
+            guard let date = review.date else { return false }
+            return date >= startDate && date <= now
+        }
+        
+        // Calculate daily reviews
+        var dailyReviews: [(date: Date, count: Int)] = []
+        for dayOffset in 0..<range.days {
+            let day = calendar.date(byAdding: .day, value: -dayOffset, to: now)!
+            let dayStart = calendar.startOfDay(for: day)
+            let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+            
+            let count = filteredReviews.filter { review in
+                guard let date = review.date else { return false }
+                return date >= dayStart && date < dayEnd
+            }.count
+            
+            dailyReviews.append((date: dayStart, count: count))
+        }
+        
+        // Calculate retention rate
+        let totalReviews = filteredReviews.count
+        let correctReviews = filteredReviews.filter { review in
+            review.rating == "good" || review.rating == "easy"
+        }.count
+        let retentionRate = totalReviews > 0 ? Double(correctReviews) / Double(totalReviews) : 0
+        
+        // Calculate tag counts
+        let tagCounts = calculateTagCounts()
+        
+        return Statistics(
+            totalReviews: totalReviews,
+            retentionRate: retentionRate,
+            dailyReviews: dailyReviews.reversed(),
+            tagCounts: tagCounts
+        )
+    }
+    
+    private func calculateTagCounts() -> [String: Int] {
         var tagCounts: [String: Int] = [:]
+        
+        // Count cards for each tag
         for card in cards {
-            for tag in (card.tags ?? []) {
+            for tag in card.tags {
                 tagCounts[tag, default: 0] += 1
             }
         }
         
-        let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now)!
-        let dueToday = cards.filter { $0.dueDate ?? now <= endOfDay }.count
-        
-        return Statistics(
-            totalReviews: cards.count * 3,
-            retentionRate: 0.85,
-            dueToday: dueToday,
-            currentStreak: 5,
-            againPercentage: 50,
-            goodPercentage: 100,
-            easyPercentage: 50,
-            tagCounts: tagCounts
-        )
+        return tagCounts
     }
 }
 
@@ -154,7 +183,7 @@ struct TimeRangePicker: View {
     }
 }
 
-struct StatCard: View {
+struct AnalyticsStatBox: View {
     let title: String
     let value: String
     let icon: String
@@ -162,73 +191,79 @@ struct StatCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Circle()
-                .fill(color.opacity(0.2))
-                .frame(width: 36, height: 36)
-                .overlay(
-                    Image(systemName: icon)
-                        .font(.system(size: 16))
-                        .foregroundColor(color)
-                )
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                    .foregroundColor(color)
+                Spacer()
+            }
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(value)
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.white)
-                
                 Text(title)
                     .font(.system(size: 15))
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .foregroundColor(Color.hex("8E8E93"))
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color(hex: "1C1C1E"))
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(Color.hex("1C1C1E"))
         .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(hex: "2C2C2E"), lineWidth: 1)
-        )
     }
 }
 
-struct ReviewQualityBar: View {
-    let label: String
-    let value: CGFloat
-    let total: CGFloat
-    let color: Color
+struct ReviewGraph: View {
+    let data: [(date: Date, count: Int)]
+    @AppStorage("accentColor") private var accentColor = "5E5CE6"
     
-    var percentage: Int {
-        Int((value / total) * 100)
+    private var maxCount: Int {
+        data.map { $0.count }.max() ?? 0
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(label)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.white)
-                
-                Spacer()
-                
-                Text("\(percentage)%")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(Color(hex: "8E8E93"))
-            }
-            
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    Rectangle()
-                        .fill(Color(hex: "2C2C2E"))
+        GeometryReader { geometry in
+            VStack(spacing: 8) {
+                // Graph
+                ZStack(alignment: .bottom) {
+                    // Background grid
+                    VStack(spacing: 0) {
+                        ForEach(0..<4) { i in
+                            Divider()
+                                .background(Color.hex("2C2C2E"))
+                            if i < 3 {
+                                Spacer()
+                            }
+                        }
+                    }
                     
-                    Rectangle()
-                        .fill(color)
-                        .frame(width: geometry.size.width * (value / total))
+                    // Bars
+                    HStack(alignment: .bottom, spacing: 2) {
+                        ForEach(data, id: \.date) { item in
+                            VStack {
+                                Rectangle()
+                                    .fill(Color.hex(accentColor))
+                                    .frame(height: geometry.size.height * CGFloat(item.count) / CGFloat(max(maxCount, 1)))
+                                
+                                Text(formatDate(item.date))
+                                    .font(.system(size: 10))
+                                    .foregroundColor(Color.hex("8E8E93"))
+                                    .rotationEffect(.degrees(-45))
+                                    .offset(y: 20)
+                            }
+                        }
+                    }
                 }
+                .padding(.bottom, 30) // Space for rotated labels
             }
-            .frame(height: 8)
-            .cornerRadius(4)
         }
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM/dd"
+        return formatter.string(from: date)
     }
 }
 
@@ -236,18 +271,24 @@ enum TimeRange: String, CaseIterable, Identifiable {
     case week = "Week"
     case month = "Month"
     case year = "Year"
+    case allTime = "All Time"
     
     var id: String { rawValue }
+    
+    var days: Int {
+        switch self {
+        case .week: return 7
+        case .month: return 30
+        case .year: return 365
+        case .allTime: return 3650 // 10 years
+        }
+    }
 }
 
 struct Statistics {
     let totalReviews: Int
     let retentionRate: Double
-    let dueToday: Int
-    let currentStreak: Int
-    let againPercentage: CGFloat
-    let goodPercentage: CGFloat
-    let easyPercentage: CGFloat
+    let dailyReviews: [(date: Date, count: Int)]
     let tagCounts: [String: Int]
 }
 

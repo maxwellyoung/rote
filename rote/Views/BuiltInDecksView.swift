@@ -8,6 +8,8 @@ struct BuiltInDecksView: View {
     @State private var selectedCategory: BuiltInDeck.DeckCategory?
     @State private var importingDeck: BuiltInDeck?
     @State private var showingImportConfirmation = false
+    @State private var showingImportError = false
+    @State private var importError: String = ""
     
     private var groupedDecks: [BuiltInDeck.DeckCategory: [BuiltInDeck]] {
         Dictionary(grouping: BuiltInDeck.allDecks) { $0.category }
@@ -72,29 +74,52 @@ struct BuiltInDecksView: View {
                     Text("Import \(deck.cards.count) cards from '\(deck.name)'?")
                 }
             }
+            .alert("Import Error", isPresented: $showingImportError) {
+                Button("OK") {}
+            } message: {
+                Text(importError)
+            }
         }
     }
     
     private func importDeck(_ deck: BuiltInDeck) {
-        for builtInCard in deck.cards {
-            let card = Card(context: viewContext)
-            card.id = UUID()
-            card.front = builtInCard.front
-            card.back = builtInCard.back
-            card.tags = builtInCard.tags
-            card.createdAt = Date()
-            card.modifiedAt = Date()
-            card.interval = 0
-            card.ease = 2.5
-            card.streak = 0
-            card.reviewCount = 0
-            card.dueDate = Date()
-        }
-        
         do {
+            // Create a new deck to hold the cards
+            let newDeck = Deck(context: viewContext)
+            newDeck.id = UUID()
+            newDeck.title = deck.name
+            newDeck.type = deck.category.rawValue
+            newDeck.createdAt = Date()
+            
+            // Import each card
+            for builtInCard in deck.cards {
+                let card = Card(context: viewContext)
+                card.id = UUID()
+                card.front = builtInCard.front
+                card.back = builtInCard.back
+                card.tags = builtInCard.tags
+                card.createdAt = Date()
+                card.modifiedAt = Date()
+                card.interval = 0
+                card.ease = 2.5
+                card.streak = 0
+                card.reviewCount = 0
+                card.dueDate = Date()
+                card.nextReviewAt = Date()
+                card.state = Card.State.new.rawValue
+                card.stepIndex = 0
+                card.easeFactor = 2.5
+                card.deck = newDeck
+            }
+            
             try viewContext.save()
+            dismiss() // Dismiss the sheet after successful import
         } catch {
             print("Error importing deck: \(error)")
+            importError = error.localizedDescription
+            showingImportError = true
+            // Rollback any changes if there was an error
+            viewContext.rollback()
         }
     }
 }

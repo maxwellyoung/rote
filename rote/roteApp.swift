@@ -8,13 +8,18 @@
 import SwiftUI
 
 @main
-struct roteApp: App {
+struct RoteApp: App {
     let persistenceController = PersistenceController.shared
+
+    init() {
+        Theme.applyTheme()
+    }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .preferredColorScheme(.dark)
         }
     }
 }

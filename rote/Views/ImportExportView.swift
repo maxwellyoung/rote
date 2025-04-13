@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import CoreData
 
 struct ImportExportView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -54,29 +55,29 @@ struct ImportExportView: View {
     }
     
     private func exportCards() {
-        let fetchRequest = Card.fetchRequest()
+        let request = NSFetchRequest<Card>(entityName: "Card")
         do {
-            let cards = try viewContext.fetch(fetchRequest)
-            let exportCards = cards.map { card -> [String: Any] in
+            let cards = try viewContext.fetch(request)
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            
+            let cardData = cards.map { card in
                 [
-                    "id": card.id?.uuidString ?? UUID().uuidString,
+                    "id": card.id?.uuidString ?? "",
                     "front": card.front ?? "",
                     "back": card.back ?? "",
-                    "tags": card.tags ?? [],
+                    "tags": card.tags,
                     "createdAt": card.createdAt ?? Date(),
-                    "modifiedAt": card.modifiedAt ?? Date(),
-                    "interval": card.interval,
-                    "ease": card.ease,
-                    "streak": card.streak,
-                    "reviewCount": card.reviewCount
-                ]
+                    "modifiedAt": card.modifiedAt ?? Date()
+                ] as [String: Any]
             }
             
-            let json = try JSONSerialization.data(withJSONObject: exportCards, options: .prettyPrinted)
-            exportData = json
-            showingExporter = true
+            if let jsonData = try? JSONSerialization.data(withJSONObject: cardData, options: .prettyPrinted) {
+                exportData = jsonData
+                showingExporter = true
+            }
         } catch {
-            print("Error exporting: \(error.localizedDescription)")
+            print("Error exporting cards: \(error)")
         }
     }
     
@@ -84,20 +85,39 @@ struct ImportExportView: View {
         do {
             let data = try Data(contentsOf: url)
             let json = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
+            let formatter = ISO8601DateFormatter()
             
             for cardData in json {
                 let card = Card(context: viewContext)
                 card.id = UUID(uuidString: cardData["id"] as? String ?? UUID().uuidString)
                 card.front = cardData["front"] as? String
                 card.back = cardData["back"] as? String
-                card.tags = cardData["tags"] as? [String]
-                card.createdAt = (cardData["createdAt"] as? String)?.iso8601Date ?? Date()
-                card.modifiedAt = (cardData["modifiedAt"] as? String)?.iso8601Date ?? Date()
+                card.tags = (cardData["tags"] as? [String]) ?? []
+                
+                // Handle dates
+                if let createdAtString = cardData["createdAt"] as? String {
+                    card.createdAt = formatter.date(from: createdAtString)
+                }
+                if let modifiedAtString = cardData["modifiedAt"] as? String {
+                    card.modifiedAt = formatter.date(from: modifiedAtString)
+                }
+                if let lastReviewDateString = cardData["lastReviewDate"] as? String {
+                    card.lastReviewDate = formatter.date(from: lastReviewDateString)
+                }
+                if let dueDateString = cardData["dueDate"] as? String {
+                    card.dueDate = formatter.date(from: dueDateString)
+                }
+                
+                // Handle numeric values
                 card.interval = cardData["interval"] as? Double ?? 0.0
                 card.ease = cardData["ease"] as? Double ?? 2.5
                 card.streak = cardData["streak"] as? Int32 ?? 0
                 card.reviewCount = cardData["reviewCount"] as? Int32 ?? 0
-                card.dueDate = Date()
+                
+                // Handle review history
+                if let history = cardData["reviewHistory"] as? [[String: Any]] {
+                    card.reviewHistory = history
+                }
             }
             
             try viewContext.save()

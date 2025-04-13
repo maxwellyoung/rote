@@ -3,207 +3,583 @@ import CoreData
 
 struct TagsView: View {
     @Environment(\.managedObjectContext) private var viewContext
-    @FetchRequest(
+    @FetchRequest<Card>(
         sortDescriptors: [NSSortDescriptor(keyPath: \Card.createdAt, ascending: true)],
-        animation: .default)
-    private var cards: FetchedResults<Card>
+        animation: .default
+    ) private var cards: FetchedResults<Card>
     
     @State private var searchText = ""
+    @State private var showingRenameSheet = false
     @State private var selectedTag: String?
+    @State private var newTagName = ""
+    @State private var isEditMode = false
+    @State private var selectedTags = Set<String>()
+    @State private var showingBatchActionSheet = false
+    @State private var showingMergeSheet = false
+    @State private var mergeTargetTag: String?
+    @State private var showingColorSheet = false
+    @AppStorage("tagColors") private var tagColorsData = "{}"
     
-    private var tagGroups: [String: [Card]] {
-        var groups: [String: [Card]] = [:]
-        for card in cards {
-            for tag in (card.tags ?? []) {
-                if groups[tag] == nil {
-                    groups[tag] = []
-                }
-                groups[tag]?.append(card)
+    private var tagColors: [String: String] {
+        get {
+            if let data = tagColorsData.data(using: .utf8),
+               let dict = try? JSONDecoder().decode([String: String].self, from: data) {
+                return dict
+            }
+            return [:]
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue),
+               let string = String(data: data, encoding: .utf8) {
+                tagColorsData = string
             }
         }
+    }
+    
+    private mutating func updateTagColor(_ tag: String, color: String) {
+        var colors = tagColors
+        colors[tag] = color
+        tagColors = colors
+    }
+    
+    var filteredTags: [String] {
+        let allTags = Array(Set(cards.compactMap { $0.tags }.flatMap { $0 }))
+        if searchText.isEmpty {
+            return allTags.sorted()
+        }
+        return allTags.filter { $0.localizedCaseInsensitiveContains(searchText) }.sorted()
+    }
+    
+    private var tagGroups: [String: [Card]] {
+        let allCards = cards.compactMap { $0 }
+        var groups: [String: [Card]] = [:]
+        
+        for card in allCards {
+            for tag in card.tags {
+                groups[tag, default: []].append(card)
+            }
+        }
+        
         return groups
     }
     
-    private var filteredTags: [String] {
-        let tags = Array(tagGroups.keys).sorted()
-        if searchText.isEmpty {
-            return tags
+    var body: some View {
+        VStack(spacing: 0) {
+            SearchBar(text: $searchText)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+            
+            if filteredTags.isEmpty {
+                EmptyStateView(
+                    icon: "tag.slash",
+                    title: "No tags found",
+                    message: "Add tags to your cards to organize them"
+                )
+            } else {
+                TagListView(
+                    searchText: searchText,
+                    filteredTags: filteredTags,
+                    tagGroups: tagGroups,
+                    tagColorsData: tagColorsData,
+                    isEditMode: $isEditMode,
+                    selectedTags: $selectedTags,
+                    onDeleteTag: deleteTag,
+                    onRenameTag: { tag in
+                        selectedTag = tag
+                        newTagName = tag
+                        showingRenameSheet = true
+                    },
+                    onColorTag: { tag in
+                        selectedTag = tag
+                        showingColorSheet = true
+                    }
+                )
+            }
         }
-        return tags.filter { $0.localizedCaseInsensitiveContains(searchText) }
+        .navigationTitle("Tags")
+        .sheet(isPresented: $showingRenameSheet) {
+            if let tag = selectedTag {
+                RenameTagView(
+                    tag: tag,
+                    newName: $newTagName,
+                    onRename: { renameTag(from: tag, to: $0) }
+                )
+            }
+        }
+        .sheet(isPresented: $showingColorSheet) {
+            if let tag = selectedTag {
+                TagColorPickerView(
+                    tag: tag,
+                    selectedColor: tagColors[tag] ?? "5E5CE6",
+                    onColorSelected: { color in
+                        withAnimation {
+                            $tagColorsData.wrappedValue = try! JSONEncoder()
+                                .encode(tagColors.merging([tag: color]) { $1 })
+                                .toString()
+                        }
+                    }
+                )
+            }
+        }
     }
     
-    var body: some View {
-        NavigationView {
-            ZStack {
-                // Background gradient
-                LinearGradient(
-                    gradient: Gradient(colors: [Color.hex("1A1A1A"), Color.hex("0A0A0A")]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .edgesIgnoringSafeArea(.all)
-                
-                VStack(spacing: 0) {
-                    // Search bar
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(Color.hex("8E8E93"))
-                        
-                        TextField("Search tags...", text: $searchText)
-                            .foregroundColor(.white)
-                            .autocapitalization(.none)
-                        
-                        if !searchText.isEmpty {
-                            Button(action: { searchText = "" }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(Color.hex("8E8E93"))
-                            }
-                        }
+    private func deleteTag(_ tag: String) {
+        withAnimation {
+            for card in cards {
+                var cardTags = card.tags
+                cardTags.removeAll { $0 == tag }
+                card.tags = cardTags
+            }
+            try? viewContext.save()
+        }
+    }
+    
+    private func deleteTags(_ tags: [String]) {
+        withAnimation {
+            for card in cards {
+                var cardTags = card.tags
+                cardTags.removeAll { tags.contains($0) }
+                card.tags = cardTags
+            }
+            selectedTags.removeAll()
+            try? viewContext.save()
+        }
+    }
+    
+    private func mergeTags(into targetTag: String) {
+        withAnimation {
+            for card in cards {
+                var cardTags = card.tags
+                if cardTags.contains(where: { selectedTags.contains($0) }) {
+                    cardTags.removeAll { selectedTags.contains($0) }
+                    if !cardTags.contains(targetTag) {
+                        cardTags.append(targetTag)
                     }
-                    .padding(12)
-                    .background(Color.hex("1C1C1E"))
-                    .cornerRadius(10)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    
-                    if filteredTags.isEmpty {
-                        SharedEmptyStateView(
-                            systemImage: "tag.circle.fill",
-                            title: "No tags found",
-                            message: searchText.isEmpty ? "Add tags to your cards to organize them" : "Try a different search term",
-                            tintColor: Color.hex("5E5CE6")
-                        )
-                    } else {
-                        ScrollView {
-                            LazyVStack(spacing: 12) {
-                                ForEach(filteredTags, id: \.self) { tag in
-                                    NavigationLink(destination: TagDetailView(tag: tag, cards: tagGroups[tag] ?? [])) {
-                                        TagRowView(tag: tag, count: tagGroups[tag]?.count ?? 0)
-                                    }
-                                }
-                            }
-                            .padding(16)
-                        }
-                    }
+                    card.tags = cardTags
                 }
             }
-            .navigationTitle("Tags")
-            .navigationBarTitleDisplayMode(.inline)
+            selectedTags.removeAll()
+            try? viewContext.save()
+        }
+    }
+    
+    private func renameTag(from oldTag: String, to newTag: String) {
+        withAnimation {
+            for card in cards {
+                var cardTags = card.tags
+                if let index = cardTags.firstIndex(of: oldTag) {
+                    cardTags[index] = newTag
+                    card.tags = cardTags
+                }
+            }
+            try? viewContext.save()
+            showingRenameSheet = false
         }
     }
 }
 
-struct TagRowView: View {
+// MARK: - Tag List View
+private struct TagListView: View {
+    let searchText: String
+    let filteredTags: [String]
+    let tagGroups: [String: [Card]]
+    let tagColorsData: String
+    @Binding var isEditMode: Bool
+    @Binding var selectedTags: Set<String>
+    let onDeleteTag: (String) -> Void
+    let onRenameTag: (String) -> Void
+    let onColorTag: (String) -> Void
+    
+    private var tagColors: [String: String] {
+        if let data = tagColorsData.data(using: .utf8),
+           let dict = try? JSONDecoder().decode([String: String].self, from: data) {
+            return dict
+        }
+        return [:]
+    }
+    
+    var body: some View {
+        List {
+            ForEach(filteredTags, id: \.self) { tag in
+                NavigationLink(destination: TagDetailView(tag: tag)) {
+                    HStack {
+                        Circle()
+                            .fill(Color.hex(tagColors[tag] ?? "5E5CE6"))
+                            .frame(width: 12, height: 12)
+                        Text(tag)
+                        Spacer()
+                        Text("\(tagGroups[tag]?.count ?? 0)")
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        onDeleteTag(tag)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    
+                    Button {
+                        onRenameTag(tag)
+                    } label: {
+                        Label("Rename", systemImage: "pencil")
+                    }
+                    .tint(.yellow)
+                    
+                    Button {
+                        onColorTag(tag)
+                    } label: {
+                        Label("Color", systemImage: "paintpalette")
+                    }
+                    .tint(.orange)
+                }
+            }
+        }
+        .listStyle(.plain)
+    }
+}
+
+// MARK: - Tag Row
+private struct TagRow: View {
     let tag: String
-    let count: Int
+    let cardCount: Int
+    let color: String
     
     var body: some View {
         HStack {
-            HStack(spacing: 12) {
-                Circle()
-                    .fill(Color.hex("5E5CE6").opacity(0.2))
-                    .frame(width: 40, height: 40)
-                    .overlay(
-                        Image(systemName: "tag.fill")
-                            .foregroundColor(Color.hex("5E5CE6"))
-                    )
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(tag)
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(.white)
-                    
-                    Text("\(count) card\(count == 1 ? "" : "s")")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(Color.hex("8E8E93"))
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color.hex("8E8E93"))
-            }
-            .padding(16)
-            .background(Color.hex("1C1C1E"))
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.hex("2C2C2E"), lineWidth: 1)
-            )
+            Image(systemName: "tag.fill")
+                .foregroundColor(Color.hex(color))
+                .font(.system(size: 14))
+            
+            Text(tag)
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            Text("\(cardCount)")
+                .foregroundColor(.gray)
+                .font(.system(size: 14))
         }
+        .padding(.vertical, 8)
     }
 }
 
+// MARK: - Search Bar
+private struct SearchBar: View {
+    @Binding var text: String
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.gray)
+            
+            TextField("Search tags...", text: $text)
+                .textFieldStyle(.plain)
+                .foregroundColor(.white)
+            
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.gray)
+                }
+            }
+        }
+        .padding(8)
+        .background(Color.hex("2C2C2E"))
+        .cornerRadius(8)
+    }
+}
+
+// MARK: - Tag Detail View
 struct TagDetailView: View {
     let tag: String
-    let cards: [Card]
+    @AppStorage("tagColors") private var tagColorsData = "{}"
+    @AppStorage("accentColor") private var accentColor = "5E5CE6"
+    @Environment(\.managedObjectContext) private var viewContext
+    @FetchRequest<Card> private var cards: FetchedResults<Card>
+    @State private var selectedCard: Card?
+    @State private var showingEditSheet = false
     
-    var body: some View {
-        ZStack {
-            // Background gradient
-            LinearGradient(
-                gradient: Gradient(colors: [Color.hex("1A1A1A"), Color.hex("0A0A0A")]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .edgesIgnoringSafeArea(.all)
-            
-            ScrollView {
-                LazyVStack(spacing: 12) {
-                    ForEach(cards, id: \.id) { card in
-                        CardPreviewView(card: card)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
+    private var tagColors: [String: String] {
+        get {
+            if let data = tagColorsData.data(using: .utf8),
+               let dict = try? JSONDecoder().decode([String: String].self, from: data) {
+                return dict
+            }
+            return [:]
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue),
+               let string = String(data: data, encoding: .utf8) {
+                tagColorsData = string
             }
         }
+    }
+    
+    init(tag: String) {
+        self.tag = tag
+        let predicate = NSPredicate(format: "ANY tags CONTAINS[c] %@", tag)
+        let sortDescriptors = [NSSortDescriptor(keyPath: \Card.createdAt, ascending: true)]
+        _cards = FetchRequest<Card>(
+            sortDescriptors: sortDescriptors,
+            predicate: predicate,
+            animation: .default
+        )
+    }
+    
+    private var tagColor: String {
+        tagColors[tag] ?? accentColor
+    }
+    
+    var body: some View {
+        List {
+            ForEach(cards) { card in
+                CardRow(card: card)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            withAnimation {
+                                var cardTags = card.tags
+                                cardTags.removeAll { $0 == tag }
+                                card.tags = cardTags
+                                try? viewContext.save()
+                            }
+                        } label: {
+                            Label("Remove Tag", systemImage: "tag.slash")
+                        }
+                        
+                        Button {
+                            selectedCard = card
+                            showingEditSheet = true
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                        .tint(.yellow)
+                    }
+            }
+        }
+        .listStyle(.plain)
         .navigationTitle(tag)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingEditSheet) {
+            if let card = selectedCard {
+                EditCardView(card: card)
+            }
+        }
     }
 }
 
-struct CardPreviewView: View {
-    let card: Card
+// MARK: - Rename Tag View
+private struct RenameTagView: View {
+    let tag: String
+    @Binding var newName: String
+    let onRename: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("accentColor") private var accentColor = "5E5CE6"
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(card.front ?? "")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundColor(.white)
-                .lineLimit(2)
-            
-            Text(card.back ?? "")
-                .font(.system(size: 15, weight: .regular))
-                .foregroundColor(Color.hex("8E8E93"))
-                .lineLimit(3)
-            
-            HStack(spacing: 16) {
-                HStack(spacing: 4) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 12))
-                    Text(card.dueDate?.formatted(date: .abbreviated, time: .omitted) ?? "")
-                        .font(.system(size: 12, weight: .medium))
-                }
-                
-                HStack(spacing: 4) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 12))
-                    Text("\(String(format: "%.1f", card.interval))d")
-                        .font(.system(size: 12, weight: .medium))
+        Form {
+            Section {
+                TextField("Tag name", text: $newName)
+                    .foregroundColor(.white)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+            }
+            .listRowBackground(Color.hex("1C1C1E"))
+        }
+        .navigationTitle("Rename Tag")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    dismiss()
                 }
             }
-            .foregroundColor(Color.hex("8E8E93"))
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    onRename(newName)
+                    dismiss()
+                }
+                .disabled(newName.isEmpty || newName == tag)
+            }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.hex("1C1C1E"))
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.hex("2C2C2E"), lineWidth: 1)
-        )
+        .background(Color.black.edgesIgnoringSafeArea(.all))
+    }
+}
+
+// MARK: - Merge Tags View
+private struct MergeTagsView: View {
+    let selectedTags: [String]
+    let allTags: [String]
+    let onMerge: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("accentColor") private var accentColor = "5E5CE6"
+    @State private var searchText = ""
+    @State private var targetTag: String?
+    
+    private var availableTags: [String] {
+        allTags.filter { !selectedTags.contains($0) }
+    }
+    
+    private var filteredTags: [String] {
+        if searchText.isEmpty {
+            return availableTags
+        }
+        return availableTags.filter { $0.localizedCaseInsensitiveContains(searchText) }
+    }
+    
+    var body: some View {
+        List {
+            Section {
+                ForEach(selectedTags, id: \.self) { tag in
+                    HStack {
+                        Image(systemName: "tag.fill")
+                            .foregroundColor(Color.hex(accentColor))
+                        Text(tag)
+                            .foregroundColor(.white)
+                    }
+                }
+            } header: {
+                Text("Selected Tags")
+                    .foregroundColor(.gray)
+            }
+            .listRowBackground(Color.hex("1C1C1E"))
+            
+            Section {
+                ForEach(filteredTags, id: \.self) { tag in
+                    HStack {
+                        Image(systemName: "tag.fill")
+                            .foregroundColor(Color.hex(accentColor))
+                        Text(tag)
+                            .foregroundColor(.white)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        targetTag = tag
+                    }
+                    .overlay(alignment: .trailing) {
+                        if targetTag == tag {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(Color.hex(accentColor))
+                        }
+                    }
+                }
+            } header: {
+                Text("Merge Into")
+                    .foregroundColor(.gray)
+            }
+            .listRowBackground(Color.hex("1C1C1E"))
+        }
+        .searchable(text: $searchText, prompt: "Search tags...")
+        .navigationTitle("Merge Tags")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    dismiss()
+                }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Merge") {
+                    if let targetTag = targetTag {
+                        onMerge(targetTag)
+                        dismiss()
+                    }
+                }
+                .disabled(targetTag == nil)
+            }
+        }
+        .background(Color.black.edgesIgnoringSafeArea(.all))
+    }
+}
+
+// MARK: - Tag Color Picker View
+private struct TagColorPickerView: View {
+    let tag: String
+    @State private var selectedColor: String
+    let onColorSelected: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    private let colors = [
+        "5E5CE6", // Blue
+        "FF3B30", // Red
+        "34C759", // Green
+        "FF9500", // Orange
+        "FF2D55", // Pink
+        "5856D6", // Purple
+        "FFCC00", // Yellow
+        "00C7BE", // Teal
+        "FF6482", // Rose
+        "32ADE6", // Sky
+    ]
+    
+    init(tag: String, selectedColor: String, onColorSelected: @escaping (String) -> Void) {
+        self.tag = tag
+        self._selectedColor = State(initialValue: selectedColor)
+        self.onColorSelected = onColorSelected
+    }
+    
+    var body: some View {
+        List {
+            Section {
+                TagRow(
+                    tag: tag,
+                    cardCount: 0,
+                    color: selectedColor
+                )
+                .listRowBackground(Color.hex("1C1C1E"))
+            } header: {
+                Text("Preview")
+                    .foregroundColor(.gray)
+            }
+            
+            Section {
+                LazyVGrid(columns: [
+                    GridItem(.adaptive(minimum: 44))
+                ], spacing: 12) {
+                    ForEach(colors, id: \.self) { color in
+                        Circle()
+                            .fill(Color.hex(color))
+                            .frame(width: 44, height: 44)
+                            .overlay {
+                                if color == selectedColor {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.white)
+                                        .font(.system(size: 20, weight: .bold))
+                                }
+                            }
+                            .onTapGesture {
+                                selectedColor = color
+                                onColorSelected(color)
+                            }
+                    }
+                }
+                .padding(.vertical, 8)
+            } header: {
+                Text("Colors")
+                    .foregroundColor(.gray)
+            }
+            .listRowBackground(Color.hex("1C1C1E"))
+        }
+        .navigationTitle("Tag Color")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") {
+                    dismiss()
+                }
+            }
+        }
+        .background(Color.black.edgesIgnoringSafeArea(.all))
+    }
+}
+
+// MARK: - Array Extension
+private extension Array where Element: Hashable {
+    func uniqued() -> [Element] {
+        var seen = Set<Element>()
+        return filter { seen.insert($0).inserted }
     }
 }
 
@@ -212,5 +588,11 @@ struct TagsView_Previews: PreviewProvider {
         TagsView()
             .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
             .preferredColorScheme(.dark)
+    }
+}
+
+private extension Data {
+    func toString() -> String {
+        String(data: self, encoding: .utf8) ?? "{}"
     }
 } 
