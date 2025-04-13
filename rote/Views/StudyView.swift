@@ -16,6 +16,8 @@ struct StudyView: View {
     @State private var selectedDeck: Deck?
     @State private var isShuffled = false
     @State private var studyAllDecks = false
+    @State private var showingSessionSummary = false
+    @State private var sessionStats = SessionStats()
     @AppStorage("accentColor") private var accentColor = "5E5CE6"
     
     private var filteredCards: [Card] {
@@ -62,6 +64,12 @@ struct StudyView: View {
         .sheet(isPresented: $showingDeckPicker) { deckPickerSheet }
         .sheet(isPresented: $showingStats) { StatsView() }
         .sheet(isPresented: $showingSettings) { SettingsView() }
+        .sheet(isPresented: $showingSessionSummary) {
+            SessionSummaryView(stats: sessionStats) {
+                showingSessionSummary = false
+                resetStudySession()
+            }
+        }
     }
     
     private var navigationTitle: String {
@@ -263,6 +271,15 @@ struct StudyView: View {
         
         showingAnswer = false
         
+        // Update session stats
+        sessionStats.totalCards += 1
+        switch grade {
+        case .again: sessionStats.againCount += 1
+        case .hard: sessionStats.hardCount += 1
+        case .good: sessionStats.goodCount += 1
+        case .easy: sessionStats.easyCount += 1
+        }
+        
         viewContext.perform {
             guard let card = try? viewContext.existingObject(with: cardId) as? Card else { return }
             card.scheduleReview(grade: grade)
@@ -274,7 +291,7 @@ struct StudyView: View {
                         if currentIndex < filteredCards.count - 1 {
                             currentIndex += 1
                         } else {
-                            currentIndex = 0
+                            showingSessionSummary = true
                         }
                     }
                 }
@@ -567,6 +584,140 @@ private extension Array where Element: Hashable {
     func uniqued() -> [Element] {
         var seen = Set<Element>()
         return filter { seen.insert($0).inserted }
+    }
+}
+
+// MARK: - Session Stats
+struct SessionStats {
+    var totalCards = 0
+    var againCount = 0
+    var hardCount = 0
+    var goodCount = 0
+    var easyCount = 0
+    
+    var retentionRate: Double {
+        guard totalCards > 0 else { return 0 }
+        return Double(goodCount + easyCount) / Double(totalCards) * 100
+    }
+}
+
+// MARK: - Session Summary View
+struct SessionSummaryView: View {
+    let stats: SessionStats
+    let onDismiss: () -> Void
+    @AppStorage("accentColor") private var accentColor = "5E5CE6"
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Completion animation
+                    LottieView(name: "completion")
+                        .frame(width: 200, height: 200)
+                    
+                    // Stats overview
+                    VStack(spacing: 16) {
+                        Text("Session Complete!")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.white)
+                        
+                        Text("You reviewed \(stats.totalCards) cards")
+                            .font(.system(size: 17))
+                            .foregroundColor(Color.hex("8E8E93"))
+                    }
+                    
+                    // Detailed stats
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                        StatBox(
+                            title: "Retention",
+                            value: String(format: "%.0f%%", stats.retentionRate),
+                            icon: "brain.head.profile",
+                            color: Color.hex("34C759")
+                        )
+                        
+                        StatBox(
+                            title: "Total Cards",
+                            value: "\(stats.totalCards)",
+                            icon: "rectangle.stack",
+                            color: Color.hex(accentColor)
+                        )
+                        
+                        StatBox(
+                            title: "Perfect",
+                            value: "\(stats.easyCount)",
+                            icon: "star.fill",
+                            color: Color.hex("5E5CE6")
+                        )
+                        
+                        StatBox(
+                            title: "To Review",
+                            value: "\(stats.againCount)",
+                            icon: "arrow.counterclockwise",
+                            color: Color.hex("FF3B30")
+                        )
+                    }
+                    .padding(.horizontal)
+                    
+                    // Action buttons
+                    VStack(spacing: 16) {
+                        Button(action: onDismiss) {
+                            Text("Continue Studying")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(Color.hex(accentColor))
+                                .cornerRadius(12)
+                        }
+                        
+                        Button(action: onDismiss) {
+                            Text("Done")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(Color.hex("2C2C2E"))
+                                .cornerRadius(12)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                .padding(.vertical, 32)
+            }
+            .background(Color.black.edgesIgnoringSafeArea(.all))
+            .navigationBarHidden(true)
+        }
+    }
+}
+
+private struct StatBox: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                    .foregroundColor(color)
+                Spacer()
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(value)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
+                Text(title)
+                    .font(.system(size: 15))
+                    .foregroundColor(Color.hex("8E8E93"))
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(Color.hex("1C1C1E"))
+        .cornerRadius(16)
     }
 }
 
