@@ -26,11 +26,13 @@ public class Card: NSManagedObject, Identifiable {
     @NSManaged public var easeFactor: Double // Starts at 2.5, adjusted based on performance
     
     // Review grades
-    enum Grade: String {
+    enum Grade: String, CaseIterable, Identifiable {
         case again = "Again"
         case hard = "Hard"
         case good = "Good"
         case easy = "Easy"
+        
+        var id: String { rawValue }
         
         var feedback: String {
             switch self {

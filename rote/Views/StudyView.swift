@@ -7,6 +7,7 @@ struct StudyView: View {
         sortDescriptors: [NSSortDescriptor(keyPath: \Card.dueDate, ascending: true)],
         animation: .default
     ) private var cards: FetchedResults<Card>
+    
     @State private var currentIndex = 0
     @State private var showingAnswer = false
     @State private var showingStats = false
@@ -18,22 +19,20 @@ struct StudyView: View {
     @AppStorage("accentColor") private var accentColor = "5E5CE6"
     
     private var filteredCards: [Card] {
-        let allCards = Array(self.cards).filter { $0.isReadyForReview }
-        
+        let allCards = Array(cards).filter { $0.isReadyForReview }
         if studyAllDecks {
             return isShuffled ? allCards.shuffled() : allCards.sorted { ($0.dueDate ?? Date()) < ($1.dueDate ?? Date()) }
-        }
-        
-        if let selectedDeck = selectedDeck {
+        } else if let selectedDeck = selectedDeck {
             let deckCards = allCards.filter { $0.deck == selectedDeck }
             return isShuffled ? deckCards.shuffled() : deckCards.sorted { ($0.dueDate ?? Date()) < ($1.dueDate ?? Date()) }
         }
-        
         return []
     }
     
     private var currentCard: Card? {
-        guard !filteredCards.isEmpty else { return nil }
+        guard !filteredCards.isEmpty, currentIndex >= 0, currentIndex < filteredCards.count else {
+            return nil
+        }
         return filteredCards[currentIndex]
     }
     
@@ -60,15 +59,9 @@ struct StudyView: View {
                 menuButton
             }
         }
-        .sheet(isPresented: $showingDeckPicker) {
-            deckPickerSheet
-        }
-        .sheet(isPresented: $showingStats) {
-            StatsView()
-        }
-        .sheet(isPresented: $showingSettings) {
-            SettingsView()
-        }
+        .sheet(isPresented: $showingDeckPicker) { deckPickerSheet }
+        .sheet(isPresented: $showingStats) { StatsView() }
+        .sheet(isPresented: $showingSettings) { SettingsView() }
     }
     
     private var navigationTitle: String {
@@ -89,9 +82,7 @@ struct StudyView: View {
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(.white)
         }
-        .onTapGesture {
-            showingDeckPicker = true
-        }
+        .onTapGesture { showingDeckPicker = true }
     }
     
     private var backgroundGradient: some View {
@@ -105,7 +96,10 @@ struct StudyView: View {
     
     private var mainContent: some View {
         VStack(spacing: 0) {
-            if !filteredCards.isEmpty {
+            let cards = filteredCards
+            let hasCards = !cards.isEmpty
+            
+            if hasCards, currentCard != nil {
                 progressBar
                 Spacer()
                 cardContent
@@ -117,6 +111,18 @@ struct StudyView: View {
                     showingDeckPicker: $showingDeckPicker
                 )
             }
+        }
+        .onChange(of: selectedDeck) { _, _ in
+            resetStudySession()
+        }
+        .onChange(of: studyAllDecks) { _, _ in
+            resetStudySession()
+        }
+        .onChange(of: isShuffled) { _, _ in
+            resetStudySession()
+        }
+        .onAppear {
+            resetStudySession()
         }
     }
     
@@ -134,28 +140,79 @@ struct StudyView: View {
     }
     
     private var cardContent: some View {
-        Group {
-            if let card = currentCard {
-                CardView(card: card, showingAnswer: $showingAnswer)
-                    .transition(.asymmetric(
-                        insertion: .opacity,
-                        removal: .opacity
-                    ))
-            } else {
-                // Fallback empty state
-                VStack(spacing: 16) {
-                    Image(systemName: "checkmark.circle")
-                        .font(.system(size: 48))
-                        .foregroundColor(Color.hex("8E8E93"))
-                    Text("All caught up!")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-                    Text("No more cards to review")
-                        .font(.system(size: 15))
-                        .foregroundColor(Color.hex("8E8E93"))
+        GeometryReader { geometry in
+            VStack {
+                if let card = currentCard {
+                    VStack {
+                        Text(card.front ?? "")
+                            .font(.system(size: 24, weight: .semibold))
+                            .multilineTextAlignment(.center)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: showingAnswer ? geometry.size.height * 0.4 : geometry.size.height * 0.8)
+                            .background(Color.hex("2C2C2E"))
+                            .cornerRadius(16)
+                        
+                        if showingAnswer {
+                            Text(card.back ?? "")
+                                .font(.system(size: 20))
+                                .multilineTextAlignment(.center)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: geometry.size.height * 0.4)
+                                .background(Color.hex("2C2C2E"))
+                                .cornerRadius(16)
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.3), value: showingAnswer)
+                } else {
+                    EmptyStateView()
                 }
-                .transition(.opacity)
             }
+            .padding()
+        }
+    }
+    
+    private var showAnswerButton: some View {
+        Button {
+            if currentCard != nil {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    showingAnswer = true
+                }
+            }
+        } label: {
+            Text("Show Answer")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(
+                    currentCard != nil 
+                        ? Color.hex(accentColor)
+                        : Color.hex("2C2C2E").opacity(0.3)
+                )
+                .cornerRadius(12)
+        }
+        .disabled(currentCard == nil)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+    }
+    
+    private struct EmptyStateView: View {
+        var body: some View {
+            VStack(spacing: 16) {
+                Image(systemName: "checkmark.circle")
+                    .font(.system(size: 48))
+                    .foregroundColor(Color.hex("8E8E93"))
+                Text("All caught up!")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.white)
+                Text("No more cards to review")
+                    .font(.system(size: 15))
+                    .foregroundColor(Color.hex("8E8E93"))
+            }
+            .transition(.opacity)
         }
     }
     
@@ -163,23 +220,19 @@ struct StudyView: View {
         Group {
             if let card = currentCard {
                 if showingAnswer {
-                    RatingButtons(card: card) { grade in
-                        print("Rating selected: \(grade)")
-                        do {
-                            card.scheduleReview(grade: grade)
-                            try viewContext.save()
-                            print("Successfully saved review")
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                nextCard()
-                            }
-                        } catch {
-                            print("Error saving review: \(error)")
+                    VStack(spacing: 16) {
+                        HStack(spacing: 12) {
+                            ratingButton(.again, for: card)
+                            ratingButton(.hard, for: card)
+                        }
+                        HStack(spacing: 12) {
+                            ratingButton(.good, for: card)
+                            ratingButton(.easy, for: card)
                         }
                     }
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .bottom).combined(with: .opacity),
-                        removal: .opacity
-                    ))
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                    .transition(.opacity)
                 } else {
                     showAnswerButton
                 }
@@ -187,38 +240,52 @@ struct StudyView: View {
         }
     }
     
-    private var showAnswerButton: some View {
-        Button(action: {
-            print("Show answer button tapped")
-            guard currentCard != nil else {
-                print("Warning: Attempted to show answer with no current card")
-                return
+    private func ratingButton(_ grade: Card.Grade, for card: Card) -> some View {
+        Button {
+            handleRating(grade: grade, for: card)
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: grade.icon)
+                    .font(.system(size: 24))
+                Text(grade.rawValue)
+                    .font(.system(size: 13, weight: .medium))
             }
-            
-            withAnimation(.easeInOut(duration: 0.3)) {
-                showingAnswer = true
-            }
-            print("Show answer animation started")
-        }) {
-            Text("Show Answer")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Color.hex(accentColor))
-                .cornerRadius(10)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 72)
+            .background(grade.color)
+            .cornerRadius(12)
         }
-        .padding()
-        .disabled(currentCard == nil)
-        .opacity(currentCard == nil ? 0.5 : 1.0)
-        .transition(.asymmetric(
-            insertion: .move(edge: .bottom).combined(with: .opacity),
-            removal: .opacity
-        ))
+    }
+    
+    private func handleRating(grade: Card.Grade, for card: Card) {
+        let cardId = card.objectID
+        
+        showingAnswer = false
+        
+        viewContext.perform {
+            guard let card = try? viewContext.existingObject(with: cardId) as? Card else { return }
+            card.scheduleReview(grade: grade)
+            
+            do {
+                try viewContext.save()
+                DispatchQueue.main.async {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        if currentIndex < filteredCards.count - 1 {
+                            currentIndex += 1
+                        } else {
+                            currentIndex = 0
+                        }
+                    }
+                }
+            } catch {
+                print("Failed to save review: \(error)")
+            }
+        }
     }
     
     private var deckPickerButton: some View {
-        Button(action: { showingDeckPicker = true }) {
+        Button { showingDeckPicker = true } label: {
             Image(systemName: "rectangle.stack")
                 .foregroundColor(.white)
         }
@@ -228,10 +295,10 @@ struct StudyView: View {
         Menu {
             Toggle("Shuffle Cards", isOn: $isShuffled)
             Toggle("Study All Decks", isOn: $studyAllDecks)
-            Button(action: { showingStats = true }) {
+            Button { showingStats = true } label: {
                 Label("Stats", systemImage: "chart.bar")
             }
-            Button(action: { showingSettings = true }) {
+            Button { showingSettings = true } label: {
                 Label("Settings", systemImage: "gear")
             }
         } label: {
@@ -244,39 +311,38 @@ struct StudyView: View {
         NavigationView {
             ZStack {
                 Color.black.edgesIgnoringSafeArea(.all)
-                
                 VStack(spacing: 0) {
-                    // Cover Flow carousel
+                    // Cover Flow carousel with dynamic rotation.
                     GeometryReader { geometry in
                         ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: -20) {
-                                // All Decks Cover
+                            LazyHStack(spacing: -geometry.size.width * 0.5) {
+                                // "All Decks" cover.
                                 DeckCover(
                                     title: "All Decks",
                                     subtitle: "\(cards.count) cards total",
                                     iconName: "rectangle.stack.fill",
                                     isSelected: studyAllDecks,
-                                    width: geometry.size.width * 0.8
+                                    width: geometry.size.width * 0.7
                                 )
                                 .onTapGesture {
-                                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                                         studyAllDecks = true
                                         selectedDeck = nil
                                         showingDeckPicker = false
                                     }
                                 }
                                 
-                                // Individual Deck Covers
+                                // Individual deck covers.
                                 ForEach(Array(cards.compactMap { $0.deck }.uniqued()), id: \.self) { deck in
                                     DeckCover(
                                         title: deck.title ?? "Untitled Deck",
                                         subtitle: "\(deck.cards?.count ?? 0) cards",
                                         iconName: "rectangle.on.rectangle",
                                         isSelected: selectedDeck == deck,
-                                        width: geometry.size.width * 0.8
+                                        width: geometry.size.width * 0.7
                                     )
                                     .onTapGesture {
-                                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                                             selectedDeck = deck
                                             studyAllDecks = false
                                             showingDeckPicker = false
@@ -284,18 +350,17 @@ struct StudyView: View {
                                     }
                                 }
                             }
-                            .padding(.horizontal, geometry.size.width * 0.1)
+                            .padding(.horizontal, geometry.size.width * 0.4)
                             .frame(height: geometry.size.height)
                         }
                     }
-                    .frame(height: 400)
+                    .frame(height: 300)
                     
-                    // Selected deck info
+                    // Selected deck info.
                     VStack(spacing: 8) {
                         Text(studyAllDecks ? "All Decks" : (selectedDeck?.title ?? "Select a Deck"))
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.white)
-                        
                         Text(studyAllDecks ? "\(cards.count) cards total" : "\(selectedDeck?.cards?.count ?? 0) cards")
                             .font(.system(size: 17))
                             .foregroundColor(Color.hex("8E8E93"))
@@ -307,14 +372,13 @@ struct StudyView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        showingDeckPicker = false
-                    }
+                    Button("Done") { showingDeckPicker = false }
                 }
             }
         }
     }
     
+    // MARK: - DeckCover with Dynamic 3D Rotation
     private struct DeckCover: View {
         let title: String
         let subtitle: String
@@ -324,80 +388,100 @@ struct StudyView: View {
         @AppStorage("accentColor") private var accentColor = "5E5CE6"
         
         var body: some View {
-            VStack {
-                // Cover art
-                ZStack {
-                    // Reflection effect
-                    VStack(spacing: 0) {
-                        // Main card
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(Color.hex("1C1C1E"))
-                            .frame(width: width, height: width * 1.3)
+            // Wrap content in a GeometryReader to compute dynamic rotation based on its position.
+            GeometryReader { geo in
+                // Calculate the cover's midX relative to the screen's centre.
+                let globalMidX = geo.frame(in: .global).midX
+                let screenMidX = UIScreen.main.bounds.width / 2
+                let diff = abs(screenMidX - globalMidX)
+                // A factor to control how the angle scales; cap at 60°.
+                let rotationAngle = min(diff / 10, 60)
+                
+                VStack(spacing: 0) {
+                    ZStack {
+                        // Main cover art.
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color.hex("2C2C2E"),
+                                        Color.hex("1C1C1E")
+                                    ]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: width, height: width * 0.75)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 24)
+                                RoundedRectangle(cornerRadius: 16)
                                     .stroke(Color.white.opacity(0.1), lineWidth: 1)
                             )
-                        
-                        // Reflection
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(Color.hex("1C1C1E"))
-                            .frame(width: width, height: width * 1.3)
-                            .scaleEffect(x: 1, y: -0.25, anchor: .top)
-                            .opacity(0.3)
+                        VStack(spacing: 16) {
+                            Image(systemName: iconName)
+                                .font(.system(size: 48))
+                                .foregroundColor(Color.hex(accentColor))
+                            VStack(spacing: 4) {
+                                Text(title)
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.8)
+                                Text(subtitle)
+                                    .font(.system(size: 15))
+                                    .foregroundColor(Color.hex("8E8E93"))
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                    .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+                    
+                    // Reflection effect.
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color.hex("2C2C2E").opacity(0.3),
+                                        Color.hex("1C1C1E").opacity(0.1)
+                                    ]),
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .frame(width: width, height: width * 0.75)
+                            .scaleEffect(x: 1, y: -0.5, anchor: .top)
                             .mask(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [.clear, .white.opacity(0.1)]),
+                                    gradient: Gradient(colors: [.white.opacity(0.2), .clear]),
                                     startPoint: .top,
                                     endPoint: .bottom
                                 )
                             )
                     }
-                    
-                    // Content
-                    VStack(spacing: 24) {
-                        Image(systemName: iconName)
-                            .font(.system(size: 64))
-                            .foregroundColor(Color.hex(accentColor))
-                        
-                        VStack(spacing: 8) {
-                            Text(title)
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.white)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
-                            
-                            Text(subtitle)
-                                .font(.system(size: 17))
-                                .foregroundColor(Color.hex("8E8E93"))
-                        }
-                    }
-                    .padding(.vertical, 40)
+                    .offset(y: -10)
                 }
-                .shadow(color: .black.opacity(0.5), radius: 30, x: 0, y: 15)
+                .frame(width: width, height: width * 1.0)
+                // Apply rotation: if selected, lock to 0; otherwise, use the computed angle.
+                .rotation3DEffect(
+                    .degrees(isSelected ? 0 : rotationAngle),
+                    axis: (x: 0, y: 1, z: 0),
+                    anchor: isSelected ? .center : .leading,
+                    perspective: 0.2
+                )
+                .scaleEffect(isSelected ? 1 : 0.7)
+                .offset(x: isSelected ? 0 : -width * 0.2)
+                .zIndex(isSelected ? 1 : 0)
             }
-            .frame(width: width)
-            .rotation3DEffect(
-                .degrees(isSelected ? 0 : 70),
-                axis: (x: 0, y: 1, z: 0),
-                anchor: isSelected ? .center : .leading,
-                perspective: 0.5
-            )
-            .scaleEffect(isSelected ? 1 : 0.8)
-            .offset(x: isSelected ? 0 : -width * 0.3)
-            .zIndex(isSelected ? 1 : 0)
+            .frame(width: width, height: width * 1.0)
         }
     }
     
-    private func nextCard() {
-        print("Moving to next card. Current index: \(currentIndex), Total cards: \(filteredCards.count)")
-        showingAnswer = false
-        
-        if currentIndex < filteredCards.count - 1 {
-            currentIndex += 1
-        } else {
+    private func resetStudySession() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            showingAnswer = false
             currentIndex = 0
         }
-        print("New index: \(currentIndex)")
     }
     
     private struct WelcomeView: View {
@@ -408,33 +492,26 @@ struct StudyView: View {
         var body: some View {
             VStack(spacing: 0) {
                 Spacer()
-                
-                // Icon and Title
+                // Icon and Title.
                 VStack(spacing: 24) {
                     Image(systemName: "rectangle.stack.badge.plus")
                         .font(.system(size: 64))
                         .foregroundColor(Color.hex("8E8E93"))
-                    
                     Text("Welcome to Rote")
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.white)
                 }
-                
-                // Description
+                // Description.
                 Text("Choose how you'd like to study")
                     .font(.system(size: 17))
                     .foregroundColor(Color.hex("8E8E93"))
                     .padding(.top, 12)
                     .padding(.bottom, 32)
-                
-                // Action Buttons
+                // Action buttons.
                 VStack(spacing: 16) {
-                    // Study All Button
-                    Button(action: {
-                        withAnimation(.spring()) {
-                            studyAllDecks = true
-                        }
-                    }) {
+                    Button {
+                        withAnimation(.spring()) { studyAllDecks = true }
+                    } label: {
                         HStack(spacing: 12) {
                             Image(systemName: "rectangle.stack.fill")
                                 .font(.system(size: 20))
@@ -455,9 +532,7 @@ struct StudyView: View {
                         .background(Color.white)
                         .cornerRadius(12)
                     }
-                    
-                    // Choose Deck Button
-                    Button(action: { showingDeckPicker = true }) {
+                    Button { showingDeckPicker = true } label: {
                         HStack(spacing: 12) {
                             Image(systemName: "folder.fill")
                                 .font(.system(size: 20))
@@ -480,7 +555,6 @@ struct StudyView: View {
                     }
                 }
                 .padding(.horizontal, 24)
-                
                 Spacer()
                 Spacer()
             }
@@ -488,7 +562,7 @@ struct StudyView: View {
     }
 }
 
-// MARK: - Array Extension
+// MARK: - Array Extension for Unique Elements
 private extension Array where Element: Hashable {
     func uniqued() -> [Element] {
         var seen = Set<Element>()
@@ -502,4 +576,4 @@ struct StudyView_Previews: PreviewProvider {
             .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
             .preferredColorScheme(.dark)
     }
-} 
+}

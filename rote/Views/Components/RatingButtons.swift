@@ -11,22 +11,56 @@ struct RatingButtons: View {
     
     var body: some View {
         HStack(spacing: 16) {
-            Button(action: { onRating(.again) }) {
-                RatingButton(rating: Card.Grade.again)
+            Button {
+                print("\n=== Rating Button Tapped ===")
+                print("Grade: Again")
+                print("Card ID: \(card?.id?.uuidString ?? "nil")")
+                onRating(.again)
+                print("=== End Rating Button Tap ===\n")
+            } label: {
+                RatingButton(rating: .again)
             }
+            .buttonStyle(PlainButtonStyle())
             
-            Button(action: { onRating(.hard) }) {
-                RatingButton(rating: Card.Grade.hard)
+            Button {
+                print("\n=== Rating Button Tapped ===")
+                print("Grade: Hard")
+                print("Card ID: \(card?.id?.uuidString ?? "nil")")
+                onRating(.hard)
+                print("=== End Rating Button Tap ===\n")
+            } label: {
+                RatingButton(rating: .hard)
             }
+            .buttonStyle(PlainButtonStyle())
             
-            Button(action: { onRating(.good) }) {
-                RatingButton(rating: Card.Grade.good)
+            Button {
+                print("\n=== Rating Button Tapped ===")
+                print("Grade: Good")
+                print("Card ID: \(card?.id?.uuidString ?? "nil")")
+                onRating(.good)
+                print("=== End Rating Button Tap ===\n")
+            } label: {
+                RatingButton(rating: .good)
             }
+            .buttonStyle(PlainButtonStyle())
             
-            Button(action: { onRating(.easy) }) {
-                RatingButton(rating: Card.Grade.easy)
+            Button {
+                print("\n=== Rating Button Tapped ===")
+                print("Grade: Easy")
+                print("Card ID: \(card?.id?.uuidString ?? "nil")")
+                onRating(.easy)
+                print("=== End Rating Button Tap ===\n")
+            } label: {
+                RatingButton(rating: .easy)
             }
+            .buttonStyle(PlainButtonStyle())
         }
         .padding(.horizontal)
+        .onAppear {
+            print("\n=== RatingButtons View Appeared ===")
+            print("Card ID: \(card?.id?.uuidString ?? "nil")")
+            print("Available grades: Again, Hard, Good, Easy")
+            print("=== End RatingButtons ===\n")
+        }
     }
 } 

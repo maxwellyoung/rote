@@ -21,11 +21,10 @@ extension NSManagedObject {
         
         model.entities.forEach { entity in
             print("   Entity: \(entity.name ?? "unnamed")")
-            print("   Class: \(entity.managedObjectClassName)")
+            print("   Class: \(String(describing: entity.managedObjectClassName))")
             print("   Attributes: \(entity.attributesByName.keys.joined(separator: ", "))")
             print("   Relationships: \(entity.relationshipsByName.keys.joined(separator: ", "))")
             
-            // Add module information
             if let className = NSClassFromString(entity.managedObjectClassName) {
                 print("   Module: \(String(describing: className))")
             } else {
@@ -38,21 +37,21 @@ extension NSManagedObject {
 // Type information logging
 extension Card {
     static func debugTypeInfo() {
+        let instance = Card()
         print("🔍 Card Type Information:")
         print("   Self: \(Self.self)")
         print("   Module: \(String(reflecting: Self.self))")
-        print("   Superclass: \(String(describing: Self.superclass))")
+        print("   Superclass: \(String(describing: instance.superclass))")
         print("   Conforms to CardType: \(Self.self is CardType.Type)")
         
-        let mirror = Mirror(reflecting: Card())
+        let mirror = Mirror(reflecting: instance)
         print("   Properties: \(mirror.children.map { $0.label ?? "unnamed" }.joined(separator: ", "))")
         
         // Test property access
-        let testCard = Card()
         print("   Property Access Test:")
-        print("   - id: \(String(describing: testCard.value(forKey: "id")))")
-        print("   - front: \(String(describing: testCard.value(forKey: "front")))")
-        print("   - back: \(String(describing: testCard.value(forKey: "back")))")
+        print("   - id: \(String(describing: instance.value(forKey: "id") ?? "nil"))")
+        print("   - front: \(String(describing: instance.value(forKey: "front") ?? "nil"))")
+        print("   - back: \(String(describing: instance.value(forKey: "back") ?? "nil"))")
     }
 }
 #endif
@@ -87,6 +86,21 @@ extension Review {
 
 extension Card {
     public override var description: String {
-        "Card(id: \(id?.uuidString ?? "nil"), front: \(front ?? "nil"), back: \(back ?? "nil"), tags: \(tags), createdAt: \(createdAt?.description ?? "nil"), modifiedAt: \(modifiedAt?.description ?? "nil"), lastReviewDate: \(lastReviewDate?.description ?? "nil"), dueDate: \(dueDate?.description ?? "nil"), reviewCount: \(reviewCount), ease: \(ease), interval: \(interval), streak: \(streak), reviewHistory: \(reviewHistory ?? "nil"), deck: \(deck?.id?.uuidString ?? "nil"))"
+        let cardDescription = """
+        Card:
+        - ID: \(id?.uuidString ?? "nil")
+        - Front: \(front ?? "nil")
+        - Back: \(back ?? "nil")
+        - Created: \(createdAt?.description ?? "nil")
+        - Modified: \(modifiedAt?.description ?? "nil")
+        - Last Review: \(lastReviewDate?.description ?? "nil")
+        - Due Date: \(dueDate?.description ?? "nil")
+        - Review Count: \(reviewCount)
+        - Ease: \(ease)
+        - Interval: \(interval)
+        - Streak: \(streak)
+        - Tags: \(tags.joined(separator: ", "))
+        """
+        return cardDescription
     }
 } 
